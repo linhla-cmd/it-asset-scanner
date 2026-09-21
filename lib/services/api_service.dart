@@ -1,0 +1,323 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ApiService {
+  // Mặc định sử dụng IP Tailscale của máy chủ
+  static const String defaultBaseUrl = 'http://100.86.164.103:3000';
+
+  static Future<String> getBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('custom_base_url') ?? defaultBaseUrl;
+  }
+
+  static Future<void> setBaseUrl(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_base_url', url);
+  }
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('access_token');
+  }
+
+  static Future<void> saveAuth(String token, Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('access_token', token);
+    await prefs.setString('user_info', jsonEncode(user));
+  }
+
+  // Quản lý Ghi nhớ mật khẩu (Remember Me)
+  static Future<void> saveRememberCredentials(String username, String password, bool remember) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (remember) {
+      await prefs.setString('remember_username', username);
+      await prefs.setString('remember_password', password);
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('remember_username');
+      await prefs.remove('remember_password');
+      await prefs.setBool('remember_me', false);
+    }
+  }
+
+  static Future<Map<String, dynamic>> getRememberCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remember = prefs.getBool('remember_me') ?? false;
+    final username = prefs.getString('remember_username') ?? '';
+    final password = prefs.getString('remember_password') ?? '';
+    return {
+      'remember': remember,
+      'username': username,
+      'password': password,
+    };
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
+    await prefs.remove('user_info');
+  }
+
+  // 1a. Đăng nhập
+  static Future<Map<String, dynamic>> login(String username, String password) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final url = Uri.parse('$baseUrl/api/auth/login');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        await saveAuth(data['token'] ?? data['accessToken'] ?? '', data['user'] ?? {'username': username});
+        return {'success': true, 'data': data};
+      } else {
+        final error = jsonDecode(response.body);
+        return {'success': false, 'message': error['error'] ?? 'Đăng nhập thất bại (${response.statusCode})'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Không thể kết nối máy chủ ($e)'};
+    }
+  }
+
+  // 1b. Lấy thông tin người dùng hiện tại
+  static Future<Map<String, dynamic>> getUserProfile() async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/auth/me');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'user': data['user']};
+      }
+      return {'success': false, 'message': 'Không thể lấy thông tin người dùng (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  // 1c. Đổi mật khẩu
+  static Future<Map<String, dynamic>> changePassword(String currentPassword, String newPassword) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/auth/change-password');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'Đổi mật khẩu thành công'};
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Đổi mật khẩu thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ ($e)'};
+    }
+  }
+
+  // 2. Tra cứu thông tin máy tính (Device Check & QR Lookup)
+  static Future<Map<String, dynamic>> getDeviceInfo(String query) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      
+      final lookupUrl = Uri.parse('$baseUrl/api/qr/lookup?tag=${Uri.encodeComponent(query)}');
+      final lookupRes = await http.get(
+        lookupUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      if (lookupRes.statusCode == 200) {
+        final lookupData = jsonDecode(lookupRes.body);
+        if (lookupData['found'] == true && lookupData['device'] != null) {
+          return {'success': true, 'device': lookupData['device']};
+        }
+      }
+
+      final url = Uri.parse('$baseUrl/api/devices');
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> devices = jsonDecode(response.body);
+        final cleanQuery = query.trim().toLowerCase();
+
+        final matched = devices.firstWhere(
+          (d) =>
+              (d['device_id']?.toString().toLowerCase() == cleanQuery) ||
+              (d['hostname']?.toString().toLowerCase() == cleanQuery) ||
+              (d['asset_tag']?.toString().toLowerCase() == cleanQuery) ||
+              (d['ipv4']?.toString() == cleanQuery),
+          orElse: () => null,
+        );
+
+        if (matched != null) {
+          return {'success': true, 'device': matched};
+        }
+        return {'success': false, 'message': 'Không tìm thấy thiết bị khớp với mã: $query'};
+      }
+      return {'success': false, 'message': 'Lỗi máy chủ (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối tra cứu: $e'};
+    }
+  }
+
+  // 3. Lấy toàn bộ danh sách phiếu kiểm kê
+  static Future<List<dynamic>> getAllAuditTickets() async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/tickets');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['tickets'] ?? [];
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // 3b. Alias cho getApprovedAuditTickets
+  static Future<List<dynamic>> getApprovedAuditTickets() async {
+    return getAllAuditTickets();
+  }
+
+  // 4. Lấy chi tiết phiếu kiểm kê
+  static Future<Map<String, dynamic>?> getAuditTicketDetail(dynamic ticketId) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/tickets/$ticketId');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 5. Gửi mã quét kiểm kê Asset Tag
+  static Future<Map<String, dynamic>> scanAssetTag({
+    required dynamic ticketId,
+    required String assetTag,
+    required String scannedBy,
+    String? note,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/tickets/$ticketId/scan');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'asset_tag': assetTag,
+          'scanned_by': scannedBy,
+          'scan_note': note ?? 'Quét từ Mobile App Flutter',
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Quét thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối ghi nhận kiểm kê: $e'};
+    }
+  }
+
+  // 6. Tạo đợt kiểm kê mới từ App
+  static Future<Map<String, dynamic>> createAuditTicket({
+    required String title,
+    String department = 'Tất cả',
+    String createdBy = 'Admin',
+    String notes = '',
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/tickets');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': title,
+          'department': department,
+          'created_by': createdBy,
+          'notes': notes,
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Tạo phiếu thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối tạo phiếu: $e'};
+    }
+  }
+}

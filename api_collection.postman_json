@@ -1,0 +1,146 @@
+{
+  "info": {
+    "name": "Windows Agent & IT Asset Audit API",
+    "description": "API collection for Mobile Scanner App (Flutter/React Native) connecting via Cloudflare Tunnel or LAN",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://oval-demonstrated-spy-vatican.trycloudflare.com",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login (Get Access Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123456@\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Device Inspection (Scan máy trạm)",
+      "item": [
+        {
+          "name": "Get All Devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Device By ID / Asset Tag",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/devices/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices", ":id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Audit Inventory (Kiểm kê tài sản)",
+      "item": [
+        {
+          "name": "Get Approved Audit Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit/tickets?status=APPROVED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit", "tickets"],
+              "query": [
+                { "key": "status", "value": "APPROVED" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Audit Ticket Detail & Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit/tickets/:ticketId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit", "tickets", ":ticketId"]
+            }
+          }
+        },
+        {
+          "name": "Scan Asset Tag to Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_tag\": \"AST-2026-IT01\",\n  \"scanned_by\": \"admin\",\n  \"scan_note\": \"Kiểm tra thực tế máy hoạt động bình thường\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/audit/tickets/:ticketId/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit", "tickets", ":ticketId", "scan"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
