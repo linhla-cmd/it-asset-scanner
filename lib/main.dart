@@ -4,7 +4,6 @@ import 'screens/home_screen.dart';
 import 'services/api_service.dart';
 import 'services/database_service.dart';
 import 'services/sync_service.dart';
-import 'package:logger/logger.dart';
 
 final logger = Logger();
 

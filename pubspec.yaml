@@ -35,20 +35,20 @@ dependencies:
   # Biometric
   local_auth: ^2.1.2
   
-  # File Export
-  excel: ^4.0.0
-  pdf: ^3.10.0
-  printing: ^5.11.0
-  file_picker: ^6.1.1
+  # File Export - Chưa dùng, để sau
+  # excel: ^4.0.0
+  # pdf: ^3.10.0
+  # printing: ^5.11.0
+  # file_picker: ^6.1.1
   
-  # Audio & Haptics
-  just_audio: ^0.9.36
+  # Audio & Haptics - Chưa dùng, để sau
+  # just_audio: ^0.9.36
   
   # State Management (optional)
-  provider: ^6.1.0
+  # provider: ^6.1.0  # Đã bỏ - không dùng
   
   # Logging
-  logger: ^2.0.0
+  # logger: ^2.0.0  # Đã bỏ - không dùng
 
 dev_dependencies:
   flutter_test:
