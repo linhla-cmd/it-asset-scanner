@@ -256,23 +256,17 @@ class DatabaseService {
   }
 
   // Thêm scan vào lịch sử
-  Future<void> addScanHistory({
-    String? ticketId,
-    required String assetTag,
-    required String scanResult,
-    required String scannedBy,
-    String? notes,
-  }) async {
+  Future<void> addScanHistory(String ticketId, String assetTag, String status) async {
     final db = await database;
     await db.insert(
       'scan_history',
       {
         'ticket_id': ticketId,
         'asset_tag': assetTag,
-        'scan_result': scanResult,
+        'scan_result': status,
         'scanned_at': DateTime.now().toIso8601String(),
-        'scanned_by': scannedBy,
-        'notes': notes,
+        'scanned_by': 'mobile_app',
+        'notes': null,
       },
     );
   }

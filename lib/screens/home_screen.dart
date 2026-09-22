@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {
         _stats = stats;
-        _isOnline = SyncService().isOnline;
+        _isOnline = true; // Default online, can add connectivity check later
       });
     }
   }

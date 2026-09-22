@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import 'dart:io';
+import 'dart:async';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 
@@ -31,9 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkBiometric() async {
     try {
       final canAuthenticate = await _auth.canCheckBiometrics;
-      final isDeviceSupported = await _auth.deviceSupportsBiometrics;
+      final isDeviceSupported = await _auth.isDeviceSupported();
       
-      if (canAuthenticate || isDeviceSupported) {
+      if (canAuthenticate && isDeviceSupported) {
         setState(() => _isBiometricAvailable = true);
       }
     } catch (e) {
@@ -42,8 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loadRememberedCredentials() async {
-    final username = await ApiService.getSavedUsername();
-    final rememberMe = await ApiService.isBiometricEnabled();
+    final creds = await ApiService.getRememberCredentials();
+    final username = creds['username'];
+    final rememberMe = creds['remember'];
     
     if (mounted) {
       setState(() {

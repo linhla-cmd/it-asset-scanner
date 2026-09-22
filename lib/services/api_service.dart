@@ -55,6 +55,96 @@ class ApiService {
     };
   }
 
+  // Biometric & Remember Me helpers
+  static Future<String?> getSavedUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('remember_username');
+  }
+
+  static Future<bool> isBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('biometric_enabled') ?? false;
+  }
+
+  static Future<void> saveCredentials(String username, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('remember_username', username);
+    await prefs.setString('remember_password', password);
+    await prefs.setBool('biometric_enabled', true);
+  }
+
+  static Future<List<dynamic>> getAuditTickets() async {
+    return await getAllAuditTickets();
+  }
+
+  static Future<Map<String, dynamic>> approveTicket(String ticketId) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/tickets/$ticketId/approve');
+
+      final response = await _retryRequest(() => http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      return {'success': false, 'message': 'Duyệt phiếu thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createInstantTicket(List<String> assetTags) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/instant');
+
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'asset_tags': assetTags}),
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'ticket_id': data['ticket_id'], 'data': data};
+      }
+      return {'success': false, 'message': 'Tạo phiếu thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> downloadTicketOffline(String ticketId) async {
+    try {
+      final detail = await getAuditTicketDetail(ticketId);
+      if (detail != null) {
+        return {'success': true, 'ticket': detail};
+      }
+      return {'success': false, 'message': 'Không tải được phiếu'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');

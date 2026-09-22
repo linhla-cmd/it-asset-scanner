@@ -27,7 +27,7 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
   Future<void> _loadTickets() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.getAuditTickets();
+      final response = await ApiService.getAllAuditTickets();
       if (response['success'] == true && mounted) {
         final ticketList = List<Map<String, dynamic>>.from(response['tickets'] ?? []);
         final depts = <String>{'ALL'};

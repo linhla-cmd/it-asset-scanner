@@ -32,7 +32,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qrCode).toList();
+    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qr).toList();
     if (qrCodes.isEmpty) return;
 
     final String? code = qrCodes.first.rawValue;
