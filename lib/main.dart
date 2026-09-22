@@ -1,10 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/api_service.dart';
+import 'services/database_service.dart';
+import 'services/sync_service.dart';
+import 'package:logger/logger.dart';
 
-void main() {
+final logger = Logger();
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    // Khởi tạo Database
+    await DatabaseService.instance.database;
+    logger.i('✅ Database initialized');
+    
+    // Khởi tạo SyncService (auto-sync khi có mạng)
+    await SyncService.instance.initialize();
+    logger.i('✅ SyncService initialized');
+  } catch (e) {
+    logger.e('❌ Initialization error: $e');
+  }
+  
   runApp(const MyApp());
 }
 

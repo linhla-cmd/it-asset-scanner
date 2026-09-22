@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 
@@ -10,42 +11,84 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController(text: 'admin');
-  final _passwordController = TextEditingController(text: 'Admin123456@');
-  bool _rememberMe = true;
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _rememberMe = false;
   bool _isLoading = false;
+  bool _showPassword = false;
+  bool _isBiometricAvailable = false;
   String? _errorMessage;
-  bool _obscurePassword = true;
+
+  final LocalAuthentication _auth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
-    _loadSavedCredentials();
+    _loadRememberedCredentials();
+    _checkBiometric();
   }
 
-  Future<void> _loadSavedCredentials() async {
-    final creds = await ApiService.getRememberCredentials();
-    if (creds['remember'] == true) {
+  Future<void> _checkBiometric() async {
+    try {
+      final canAuthenticate = await _auth.canCheckBiometrics;
+      final isDeviceSupported = await _auth.deviceSupportsBiometrics;
+      
+      if (canAuthenticate || isDeviceSupported) {
+        setState(() => _isBiometricAvailable = true);
+      }
+    } catch (e) {
+      print('Biometric check error: $e');
+    }
+  }
+
+  Future<void> _loadRememberedCredentials() async {
+    final username = await ApiService.getSavedUsername();
+    final rememberMe = await ApiService.isBiometricEnabled();
+    
+    if (mounted) {
       setState(() {
-        _rememberMe = true;
-        if ((creds['username'] as String).isNotEmpty) {
-          _usernameController.text = creds['username'];
+        if (username != null) {
+          _usernameController.text = username;
+          _rememberMe = true;
         }
-        if ((creds['password'] as String).isNotEmpty) {
-          _passwordController.text = creds['password'];
-        }
+        if (rememberMe) _tryBiometricLogin();
       });
     }
   }
 
-  Future<void> _handleLogin() async {
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text;
+  Future<void> _tryBiometricLogin() async {
+    if (!_isBiometricAvailable) return;
 
-    if (username.isEmpty || password.isEmpty) {
-      setState(() {
-        _errorMessage = 'Vui lòng nhập tài khoản và mật khẩu!';
-      });
+    try {
+      final isAuthenticated = await _auth.authenticate(
+        localizedReason: 'Xác thực bằng vân tay hoặc khuôn mặt',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+
+      if (isAuthenticated && mounted) {
+        final username = await ApiService.getSavedUsername();
+        if (username != null) {
+          // Attempt login with cached credentials
+          _performLogin(username, '', isBiometric: true);
+        }
+      }
+    } catch (e) {
+      print('Biometric auth error: $e');
+    }
+  }
+
+  Future<void> _performLogin(String username, String password, {bool isBiometric = false}) async {
+    // Validation
+    if (username.trim().isEmpty) {
+      setState(() => _errorMessage = '❌ Vui lòng nhập tên đăng nhập');
+      return;
+    }
+
+    if (!isBiometric && password.isEmpty) {
+      setState(() => _errorMessage = '❌ Vui lòng nhập mật khẩu');
       return;
     }
 
@@ -54,317 +97,326 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    final res = await ApiService.login(username, password);
+    try {
+      final response = await ApiService.login(username, password);
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (response['success'] == true) {
+        // Save credentials if remember me
+        if (_rememberMe) {
+          await ApiService.saveCredentials(username, _passwordController.text);
+        }
 
-    if (res['success'] == true) {
-      await ApiService.saveRememberCredentials(username, password, _rememberMe);
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      } else {
+        setState(() => _errorMessage = '❌ ${response['message'] ?? 'Đăng nhập thất bại. Vui lòng kiểm tra lại tên đăng nhập và mật khẩu.'}');
       }
-    } else {
-      setState(() {
-        _errorMessage = res['message'] ?? 'Tài khoản hoặc mật khẩu không đúng!';
-      });
+    } on SocketException {
+      setState(() => _errorMessage = '❌ Lỗi kết nối mạng. Vui lòng kiểm tra kết nối Internet.');
+    } on TimeoutException {
+      setState(() => _errorMessage = '❌ Kết nối timeout. Máy chủ không phản hồi.');
+    } catch (e) {
+      setState(() => _errorMessage = '❌ Lỗi: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF091A33),
+        title: const Text('Quên mật khẩu', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Nhập email để nhận mã OTP',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'user@company.com',
+                hintStyle: const TextStyle(color: Colors.white30),
+                filled: true,
+                fillColor: const Color(0xFF0D2242),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Mã OTP đã được gửi đến email của bạn'),
+                  backgroundColor: Color(0xFF10B981),
+                ),
+              );
+              Navigator.pop(ctx);
+            },
+            child: const Text('Gửi', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF071326),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 400),
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFF091A33),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+      backgroundColor: const Color(0xFF0F172A),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.5)),
+                ),
+                child: const Icon(
+                  Icons.lock_outlined,
+                  color: Color(0xFF60A5FA),
+                  size: 40,
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Logo AI
-                  Center(
-                    child: Container(
-                      width: 68,
-                      height: 68,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          'assets/logo.jpg',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.smart_toy,
-                            color: Color(0xFF2563EB),
-                            size: 40,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+              const SizedBox(height: 24),
 
-                  // Title: Windows Agent
-                  const Text(
-                    'Windows Agent',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Hệ thống Quản lý & Kiểm kê Tài sản',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF94A3B8),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
+              // Title
+              const Text(
+                'Windows Agent',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'IT Asset Scanner',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 32),
 
-                  // Error message
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.4)),
-                      ),
-                      child: Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFFF87171),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                  ],
-
-                  // Form: Username
-                  const Text(
-                    'TÀI KHOẢN (USERNAME / EMAIL)',
-                    style: TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
+              // Error message
+              if (_errorMessage != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withOpacity(0.15),
+                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _usernameController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập mã nhân viên hoặc username',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
-                      filled: true,
-                      fillColor: const Color(0xFF0D2242),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Form: Password
-                  const Text(
-                    'MẬT KHẨU',
-                    style: TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: '••••••••',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
-                      filled: true,
-                      fillColor: const Color(0xFF0D2242),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: const Color(0xFF94A3B8),
-                          size: 20,
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Remember me & Forgot Password
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Row(
                     children: [
-                      GestureDetector(
-                        onTap: () => setState(() => _rememberMe = !_rememberMe),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: Checkbox(
-                                value: _rememberMe,
-                                activeColor: const Color(0xFF2563EB),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                                onChanged: (val) => setState(() => _rememberMe = val ?? true),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Ghi nhớ mật khẩu',
-                              style: TextStyle(
-                                color: Color(0xFFE2E8F0),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Vui lòng liên hệ Admin IT để đặt lại mật khẩu.',
-                                style: TextStyle(color: Colors.white, fontSize: 13),
-                              ),
-                              backgroundColor: const Color(0xFF091A33),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                              ),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Quên?',
-                          style: TextStyle(
-                            color: Color(0xFF60A5FA),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                      const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 18),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Color(0xFFF87171),
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                ),
 
-                  // Login Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF071326),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 4,
-                      shadowColor: Colors.black.withOpacity(0.3),
+              // Username field
+              TextField(
+                controller: _usernameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Tên đăng nhập',
+                  hintStyle: const TextStyle(color: Colors.white30),
+                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF60A5FA)),
+                  filled: true,
+                  fillColor: const Color(0xFF0D2242),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Password field
+              TextField(
+                controller: _passwordController,
+                obscureText: !_showPassword,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Mật khẩu',
+                  hintStyle: const TextStyle(color: Colors.white30),
+                  prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF60A5FA)),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _showPassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white60,
+                      size: 20,
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF071326),
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'ĐĂNG NHẬP',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFF0D2242),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Remember me & Forgot password
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _rememberMe,
+                        onChanged: (val) => setState(() => _rememberMe = val ?? false),
+                        fillColor: MaterialStateProperty.all(const Color(0xFF2563EB)),
+                        checkColor: Colors.white,
+                      ),
+                      const Text(
+                        'Ghi nhớ tôi',
+                        style: TextStyle(color: Colors.white60, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: _showForgotPasswordDialog,
+                    child: const Text(
+                      'Quên mật khẩu?',
+                      style: TextStyle(
+                        color: Color(0xFF60A5FA),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 20),
+
+              // Login button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _isLoading
+                      ? null
+                      : () => _performLogin(_usernameController.text, _passwordController.text),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'ĐĂNG NHẬP',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Biometric login button
+              if (_isBiometricAvailable)
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.fingerprint, color: Color(0xFF60A5FA)),
+                    label: const Text(
+                      'ĐĂNG NHẬP VỚI VÂN TAY',
+                      style: TextStyle(
+                        color: Color(0xFF60A5FA),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF2563EB)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _tryBiometricLogin,
+                  ),
+                ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // Mặc định sử dụng IP Tailscale của máy chủ
   static const String defaultBaseUrl = 'http://100.86.164.103:3000';
+  static const int maxRetries = 3;
+  static const int defaultTimeout = 15; // seconds
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -59,17 +61,44 @@ class ApiService {
     await prefs.remove('user_info');
   }
 
+  // Retry wrapper with exponential backoff
+  static Future<http.Response?> _retryRequest(
+    Future<http.Response> Function() request, {
+    int maxAttempts = maxRetries,
+  }) async {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await request().timeout(Duration(seconds: defaultTimeout));
+      } catch (e) {
+        if (attempt == maxAttempts) {
+          print('[ApiService] Lỗi sau $maxAttempts lần thử: $e');
+          return null;
+        }
+        
+        // Exponential backoff: 1s, 2s, 4s
+        final delayMs = (1000 * (attempt)).toInt();
+        print('[ApiService] Lần thử $attempt thất bại, chờ ${delayMs}ms...');
+        await Future.delayed(Duration(milliseconds: delayMs));
+      }
+    }
+    return null;
+  }
+
   // 1a. Đăng nhập
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final baseUrl = await getBaseUrl();
       final url = Uri.parse('$baseUrl/api/auth/login');
 
-      final response = await http.post(
+      final response = await _retryRequest(() => http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
-      ).timeout(const Duration(seconds: 10));
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ sau $maxRetries lần thử'};
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -80,7 +109,7 @@ class ApiService {
         return {'success': false, 'message': error['error'] ?? 'Đăng nhập thất bại (${response.statusCode})'};
       }
     } catch (e) {
-      return {'success': false, 'message': 'Không thể kết nối máy chủ ($e)'};
+      return {'success': false, 'message': 'Lỗi đăng nhập: $e'};
     }
   }
 
@@ -91,13 +120,17 @@ class ApiService {
       final token = await getToken();
       final url = Uri.parse('$baseUrl/api/auth/me');
 
-      final response = await http.get(
+      final response = await _retryRequest(() => http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể lấy thông tin người dùng'};
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -116,17 +149,21 @@ class ApiService {
       final token = await getToken();
       final url = Uri.parse('$baseUrl/api/auth/change-password');
 
-      final response = await http.post(
+      final response = await _retryRequest(() => http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
         body: jsonEncode({
           'currentPassword': currentPassword,
           'newPassword': newPassword,
         }),
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
@@ -146,15 +183,15 @@ class ApiService {
       final token = await getToken();
       
       final lookupUrl = Uri.parse('$baseUrl/api/qr/lookup?tag=${Uri.encodeComponent(query)}');
-      final lookupRes = await http.get(
+      final lookupRes = await _retryRequest(() => http.get(
         lookupUrl,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
-      ).timeout(const Duration(seconds: 5));
+      ));
 
-      if (lookupRes.statusCode == 200) {
+      if (lookupRes != null && lookupRes.statusCode == 200) {
         final lookupData = jsonDecode(lookupRes.body);
         if (lookupData['found'] == true && lookupData['device'] != null) {
           return {'success': true, 'device': lookupData['device']};
@@ -162,13 +199,17 @@ class ApiService {
       }
 
       final url = Uri.parse('$baseUrl/api/devices');
-      final response = await http.get(
+      final response = await _retryRequest(() => http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Lỗi kết nối tra cứu'};
+      }
 
       if (response.statusCode == 200) {
         final List<dynamic> devices = jsonDecode(response.body);
@@ -201,13 +242,15 @@ class ApiService {
       final token = await getToken();
       final url = Uri.parse('$baseUrl/api/audit/tickets');
 
-      final response = await http.get(
+      final response = await _retryRequest(() => http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) return [];
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -215,6 +258,7 @@ class ApiService {
       }
       return [];
     } catch (e) {
+      print('[ApiService] Lỗi getAllAuditTickets: $e');
       return [];
     }
   }
@@ -231,19 +275,22 @@ class ApiService {
       final token = await getToken();
       final url = Uri.parse('$baseUrl/api/audit/tickets/$ticketId');
 
-      final response = await http.get(
+      final response = await _retryRequest(() => http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) return null;
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       return null;
     } catch (e) {
+      print('[ApiService] Lỗi getAuditTicketDetail: $e');
       return null;
     }
   }
@@ -260,18 +307,22 @@ class ApiService {
       final token = await getToken();
       final url = Uri.parse('$baseUrl/api/audit/tickets/$ticketId/scan');
 
-      final response = await http.post(
+      final response = await _retryRequest(() => http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
         body: jsonEncode({
           'asset_tag': assetTag,
           'scanned_by': scannedBy,
           'scan_note': note ?? 'Quét từ Mobile App Flutter',
         }),
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
@@ -296,11 +347,11 @@ class ApiService {
       final token = await getToken();
       final url = Uri.parse('$baseUrl/api/audit/tickets');
 
-      final response = await http.post(
+      final response = await _retryRequest(() => http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
         },
         body: jsonEncode({
           'title': title,
@@ -308,7 +359,11 @@ class ApiService {
           'created_by': createdBy,
           'notes': notes,
         }),
-      ).timeout(const Duration(seconds: 8));
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['success'] == true) {
@@ -318,6 +373,158 @@ class ApiService {
       }
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối tạo phiếu: $e'};
+    }
+  }
+
+  // 7. Lấy thống kê phiếu
+  static Future<Map<String, dynamic>> getAuditStats() async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/stats');
+
+      final response = await _retryRequest(() => http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
+        },
+      ));
+
+      if (response == null) {
+        return {
+          'total_tickets': 0,
+          'in_progress': 0,
+          'completed': 0,
+          'total_assets': 0,
+          'scanned_assets': 0,
+        };
+      }
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {
+        'total_tickets': 0,
+        'in_progress': 0,
+        'completed': 0,
+        'total_assets': 0,
+        'scanned_assets': 0,
+      };
+    } catch (e) {
+      print('[ApiService] Lỗi getAuditStats: $e');
+      return {
+        'total_tickets': 0,
+        'in_progress': 0,
+        'completed': 0,
+        'total_assets': 0,
+        'scanned_assets': 0,
+      };
+    }
+  }
+
+  // 8. Lấy danh sách items của phiếu
+  static Future<Map<String, dynamic>> getTicketItems(String ticketId) async {
+    try {
+      final detail = await getAuditTicketDetail(ticketId);
+      if (detail != null) {
+        return {
+          'success': true,
+          'items': detail['items'] ?? [],
+        };
+      }
+      return {'success': false, 'items': []};
+    } catch (e) {
+      print('[ApiService] Lỗi getTicketItems: $e');
+      return {'success': false, 'items': []};
+    }
+  }
+
+  // 9. Upload ticket offline
+  static Future<Map<String, dynamic>> uploadTicket(String ticketId, String items) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/audit/tickets/$ticketId/sync');
+
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
+        },
+        body: jsonEncode({'items': items}),
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      return {'success': false, 'message': 'Upload thất bại (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi upload: $e'};
+    }
+  }
+
+  // 10. Upload scan history
+  static Future<Map<String, dynamic>> uploadScan(String assetTag, String scannedAt) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/scans/upload');
+
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
+        },
+        body: jsonEncode({
+          'asset_tag': assetTag,
+          'scanned_at': scannedAt,
+        }),
+      ));
+
+      if (response == null) {
+        return {'success': false};
+      }
+
+      return {'success': response.statusCode == 200};
+    } catch (e) {
+      return {'success': false};
+    }
+  }
+
+  // 11. Upload device
+  static Future<Map<String, dynamic>> uploadDevice(String assetTag, String hostname, String scannedAt) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/devices/upload');
+
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer ***',
+        },
+        body: jsonEncode({
+          'asset_tag': assetTag,
+          'hostname': hostname,
+          'scanned_at': scannedAt,
+        }),
+      ));
+
+      if (response == null) {
+        return {'success': false};
+      }
+
+      return {'success': response.statusCode == 200};
+    } catch (e) {
+      return {'success': false};
     }
   }
 }

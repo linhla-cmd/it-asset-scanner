@@ -1,108 +1,501 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
+import '../services/database_service.dart';
 
 class AuditScanScreen extends StatefulWidget {
   final String ticketId;
-  final String ticketTitle;
-
-  const AuditScanScreen({
-    super.key,
-    required this.ticketId,
-    required this.ticketTitle,
-  });
+  const AuditScanScreen({super.key, required this.ticketId});
 
   @override
   State<AuditScanScreen> createState() => _AuditScanScreenState();
 }
 
 class _AuditScanScreenState extends State<AuditScanScreen> {
-  final MobileScannerController _scannerController = MobileScannerController();
+  late MobileScannerController _scannerController;
   bool _isProcessing = false;
-  Map<String, dynamic>? _ticketDetail;
-  List<dynamic> _items = [];
-  int _scannedCount = 0;
-  int _totalCount = 0;
-  String _scannedBy = 'admin';
+  int _totalItems = 0;
+  int _scannedItems = 0;
+  int _matchedItems = 0;
+  int _unexpectedItems = 0;
+  List<String> _scanHistory = [];
+  List<Map<String, dynamic>> _ticketItems = [];
+  bool _isPaused = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTicketDetails();
+    _scannerController = MobileScannerController(
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+    _loadTicketItems();
   }
 
-  Future<void> _loadTicketDetails() async {
-    final detail = await ApiService.getAuditTicketDetail(widget.ticketId);
-    if (detail != null && mounted) {
-      setState(() {
-        _ticketDetail = detail;
-        _items = detail['items'] ?? [];
-        _totalCount = _items.length;
-        _scannedCount = _items.where((i) => i['status'] == 'SCANNED').length;
-      });
+  Future<void> _loadTicketItems() async {
+    try {
+      final response = await ApiService.getTicketItems(widget.ticketId);
+      if (response['success'] == true && mounted) {
+        final items = List<Map<String, dynamic>>.from(response['items'] ?? []);
+        setState(() {
+          _ticketItems = items;
+          _totalItems = items.length;
+        });
+      }
+    } catch (e) {
+      print('Error loading ticket items: $e');
     }
   }
 
   void _onDetect(BarcodeCapture capture) async {
-    if (_isProcessing) return;
+    if (_isProcessing || _isPaused) return;
 
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final String? assetTag = barcodes.first.rawValue;
-    if (assetTag == null || assetTag.trim().isEmpty) return;
+    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qrCode).toList();
+    if (qrCodes.isEmpty) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
+    final String? code = qrCodes.first.rawValue;
+    if (code == null || code.trim().isEmpty) return;
 
-    _scannerController.stop();
+    // Check for duplicate scan
+    if (_scanHistory.contains(code)) {
+      _playSound('error');
+      _showMessage('⚠️ Đã quét mã này rồi!', Colors.orange, vibrationPattern: [100, 50, 100]);
+      return;
+    }
 
-    // Call API to submit scan
-    final res = await ApiService.scanAssetTag(
-      ticketId: widget.ticketId,
-      assetTag: assetTag.trim(),
-      scannedBy: _scannedBy,
+    setState(() => _isProcessing = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      final response = await ApiService.scanAssetTag(
+        ticketId: widget.ticketId,
+        assetTag: code,
+        scannedBy: 'mobile_app',
+      );
+
+      if (response['success'] == true) {
+        final status = response['status'] ?? 'MATCHED';
+        
+        _scanHistory.add(code);
+        setState(() {
+          _scannedItems++;
+          if (status == 'MATCHED') {
+            _matchedItems++;
+            _playSound('success');
+            _showMessage('✅ Khớp: $code', const Color(0xFF10B981), vibrationPattern: [100]);
+          } else if (status == 'UNEXPECTED') {
+            _unexpectedItems++;
+            _playSound('warning');
+            _showMessage('⚠️ Thừa: $code (Không có trong phiếu)', Colors.orange, vibrationPattern: [100, 50, 100]);
+          }
+        });
+
+        // Save to local history
+        await DatabaseService.instance.addScanHistory(widget.ticketId, code, status);
+      } else {
+        _playSound('error');
+        _showMessage('❌ Lỗi: ${response['message'] ?? 'Không tìm thấy tài sản'}', const Color(0xFFEF4444), vibrationPattern: [100, 100, 100]);
+      }
+    } catch (e) {
+      _playSound('error');
+      _showMessage('❌ Lỗi kết nối: $e', const Color(0xFFEF4444));
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  void _playSound(String type) {
+    // Placeholder for sound playing
+    // Could use audioplayers package
+  }
+
+  void _showMessage(String message, Color bgColor, {List<int>? vibrationPattern}) {
+    if (vibrationPattern != null) {
+      HapticFeedback.vibrate();
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontSize: 13)),
+        backgroundColor: bgColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
     );
+  }
 
-    if (mounted) {
-      if (res['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.greenAccent),
-                const SizedBox(width: 8),
-                Text('Đã quét thành công: $assetTag'),
-              ],
+  Future<void> _undoLastScan() async {
+    if (_scanHistory.isEmpty) {
+      _showMessage('ℹ️ Không có lần quét nào để hoàn tác', Colors.blue);
+      return;
+    }
+
+    final lastCode = _scanHistory.removeLast();
+    setState(() => _scannedItems--);
+    _showMessage('↩️ Đã hoàn tác: $lastCode', Colors.blue);
+  }
+
+  Future<void> _submitTicket() async {
+    final missingItems = _totalItems - _scannedItems;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF091A33),
+        title: const Text('Xác nhận chốt phiếu', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildConfirmStat('Tổng cộng', '$_totalItems tài sản'),
+            _buildConfirmStat('Đã quét', '$_scannedItems tài sản'),
+            _buildConfirmStat('Khớp', '$_matchedItems tài sản', const Color(0xFF10B981)),
+            _buildConfirmStat('Thừa', '$_unexpectedItems tài sản', Colors.orange),
+            _buildConfirmStat('Thiếu', '$missingItems tài sản', const Color(0xFFEF4444)),
+            const SizedBox(height: 12),
+            const Text(
+              'Bạn có chắc muốn chốt phiếu này?',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
             ),
-            backgroundColor: const Color(0xFF1E293B),
-            duration: const Duration(seconds: 2),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _submitToServer();
+            },
+            child: const Text('Chốt phiếu', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitToServer() async {
+    try {
+      _scannerController.stop();
+      
+      final response = await ApiService.approveTicket(widget.ticketId);
+      
+      if (response['success'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Phiếu đã được chốt thành công!'),
+            backgroundColor: Color(0xFF10B981),
           ),
         );
-        await _loadTicketDetails();
-      } else {
+        
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) Navigator.pop(context);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent),
-                const SizedBox(width: 8),
-                Expanded(child: Text(res['message'] ?? 'Lỗi quét Asset Tag')),
-              ],
-            ),
-            backgroundColor: Colors.red.withOpacity(0.9),
-            duration: const Duration(seconds: 3),
+            content: Text('❌ Lỗi: $e'),
+            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
-
-      await Future.delayed(const Duration(milliseconds: 1200));
       _scannerController.start();
-      setState(() {
-        _isProcessing = false;
-      });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final missingItems = _totalItems - _scannedItems;
+    final progress = _totalItems > 0 ? (_scannedItems / _totalItems * 100).toStringAsFixed(1) : '0.0';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Quét kiểm kê'),
+        backgroundColor: const Color(0xFF091A33),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause, color: Colors.white),
+            onPressed: () => setState(() => _isPaused = !_isPaused),
+            tooltip: _isPaused ? 'Tiếp tục' : 'Tạm dừng',
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => _showScanSummary(),
+            tooltip: 'Chi tiết',
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFF0F172A),
+      body: Stack(
+        children: [
+          // Camera view
+          MobileScanner(
+            controller: _scannerController,
+            onDetect: _onDetect,
+          ),
+
+          // Overlay UI
+          Column(
+            children: [
+              // Top: Counter display
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(
+                      'Phiếu: ${widget.ticketId}',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Large counter
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Column(
+                          children: [
+                            Text(
+                              '$_scannedItems',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              'Đã quét',
+                              style: TextStyle(color: Colors.white60, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 20),
+                        Column(
+                          children: [
+                            Text(
+                              '$_totalItems',
+                              style: const TextStyle(
+                                color: Colors.white30,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              'Tổng cộng',
+                              style: TextStyle(color: Colors.white30, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Progress bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _totalItems > 0 ? _scannedItems / _totalItems : 0,
+                        backgroundColor: Colors.grey[800],
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF2563EB)),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$progress% hoàn thành',
+                      style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Middle: Camera scanning area (with frame)
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Scanning frame overlay
+                    CustomPaint(
+                      size: Size.infinite,
+                      painter: ScanFramePainter(),
+                    ),
+                    // Pause indicator
+                    if (_isPaused)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.pause_circle_outline, color: Colors.white, size: 48),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'QUÉT ĐÃ TẠMTẠM DỪNG',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Bottom: Stats and controls
+              Container(
+                color: Colors.black.withOpacity(0.4),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // Stats row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatBadge('✅ Khớp', '$_matchedItems', const Color(0xFF10B981)),
+                        _buildStatBadge('⚠️ Thừa', '$_unexpectedItems', Colors.orange),
+                        _buildStatBadge('❌ Thiếu', '$missingItems', const Color(0xFFEF4444)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.undo, color: Colors.white60),
+                            label: const Text('Hoàn tác', style: TextStyle(color: Colors.white60)),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _undoLastScan,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.check_circle, color: Colors.white),
+                            label: const Text('Chốt phiếu', style: TextStyle(color: Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _submitTicket,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatBadge(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            value,
+            style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmStat(String label, String value, [Color? color]) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            value,
+            style: TextStyle(
+              color: color ?? Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showScanSummary() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF091A33),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Lịch sử quét',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _scanHistory.length,
+                itemBuilder: (ctx, idx) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${idx + 1}.',
+                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _scanHistory[idx],
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -110,180 +503,61 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
     _scannerController.dispose();
     super.dispose();
   }
+}
+
+// Custom painter for scan frame
+class ScanFramePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const frameSize = 260.0;
+    final offsetX = (size.width - frameSize) / 2;
+    final offsetY = (size.height - frameSize) / 2;
+
+    // Draw dimmed background
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = Colors.black.withOpacity(0.3),
+    );
+
+    // Clear the scanning area
+    canvas.drawRect(
+      Rect.fromLTWH(offsetX, offsetY, frameSize, frameSize),
+      Paint()..blendMode = BlendMode.clear,
+    );
+
+    // Draw frame border (Neon Blue)
+    canvas.drawRect(
+      Rect.fromLTWH(offsetX, offsetY, frameSize, frameSize),
+      Paint()
+        ..color = const Color(0xFF2563EB)
+        ..strokeWidth = 3
+        ..style = PaintingStyle.stroke,
+    );
+
+    // Draw corner brackets
+    const cornerLength = 24.0;
+    final paint = Paint()
+      ..color = const Color(0xFF2563EB)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    // Top-left
+    canvas.drawLine(Offset(offsetX, offsetY), Offset(offsetX + cornerLength, offsetY), paint);
+    canvas.drawLine(Offset(offsetX, offsetY), Offset(offsetX, offsetY + cornerLength), paint);
+
+    // Top-right
+    canvas.drawLine(Offset(offsetX + frameSize, offsetY), Offset(offsetX + frameSize - cornerLength, offsetY), paint);
+    canvas.drawLine(Offset(offsetX + frameSize, offsetY), Offset(offsetX + frameSize, offsetY + cornerLength), paint);
+
+    // Bottom-left
+    canvas.drawLine(Offset(offsetX, offsetY + frameSize), Offset(offsetX + cornerLength, offsetY + frameSize), paint);
+    canvas.drawLine(Offset(offsetX, offsetY + frameSize), Offset(offsetX, offsetY + frameSize - cornerLength), paint);
+
+    // Bottom-right
+    canvas.drawLine(Offset(offsetX + frameSize, offsetY + frameSize), Offset(offsetX + frameSize - cornerLength, offsetY + frameSize), paint);
+    canvas.drawLine(Offset(offsetX + frameSize, offsetY + frameSize), Offset(offsetX + frameSize, offsetY + frameSize - cornerLength), paint);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final progress = _totalCount > 0 ? (_scannedCount / _totalCount) : 0.0;
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.ticketTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Mã phiếu: ${widget.ticketId}',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF38BDF8)),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // Upper Section: Mobile Scanner
-          Expanded(
-            flex: 5,
-            child: Stack(
-              children: [
-                MobileScanner(
-                  controller: _scannerController,
-                  onDetect: _onDetect,
-                ),
-                // Aim Overlay
-                Center(
-                  child: Container(
-                    width: 240,
-                    height: 240,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _isProcessing ? Colors.orangeAccent : const Color(0xFF38BDF8),
-                        width: 3,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: _isProcessing
-                        ? const Center(
-                            child: CircularProgressIndicator(color: Colors.orangeAccent),
-                          )
-                        : null,
-                  ),
-                ),
-                Positioned(
-                  top: 16,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.75),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Đưa mã QR Asset Tag vào khung ngắm',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Progress & Header Banner
-          Container(
-            color: const Color(0xFF1E293B),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Tiến độ: $_scannedCount/$_totalCount thiết bị',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 13,
-                      ),
-                    ),
-                    Text(
-                      '${(progress * 100).toInt()}%',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF38BDF8),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress.toDouble(),
-                    backgroundColor: const Color(0xFF334155),
-                    color: const Color(0xFF38BDF8),
-                    minHeight: 8,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Lower Section: Item Checklist
-          Expanded(
-            flex: 4,
-            child: Container(
-              color: const Color(0xFF0F172A),
-              child: _items.isEmpty
-                  ? const Center(
-                      child: Text('Đang tải danh sách thiết bị...', style: TextStyle(color: Colors.white54)),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _items.length,
-                      separatorBuilder: (_, __) => const Divider(color: Color(0xFF1E293B), height: 1),
-                      itemBuilder: (context, index) {
-                        final item = _items[index];
-                        final isScanned = item['status'] == 'SCANNED';
-                        final assetTag = item['asset_tag'] ?? 'N/A';
-                        final hostname = item['hostname'] ?? item['device_name'] ?? 'Thiết bị ${index + 1}';
-
-                        return ListTile(
-                          dense: true,
-                          leading: Icon(
-                            isScanned ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                            color: isScanned ? Colors.greenAccent : Colors.white38,
-                            size: 22,
-                          ),
-                          title: Text(
-                            hostname,
-                            style: TextStyle(
-                              color: isScanned ? Colors.white : Colors.white70,
-                              fontWeight: isScanned ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Tag: $assetTag',
-                            style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 11),
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isScanned ? Colors.green.withOpacity(0.2) : Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              isScanned ? 'ĐÃ QUÉT' : 'CHƯA QUÉT',
-                              style: TextStyle(
-                                color: isScanned ? Colors.greenAccent : Colors.white38,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  bool shouldRepaint(ScanFramePainter oldDelegate) => false;
 }

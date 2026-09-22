@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'device_scan_screen.dart';
 import 'audit_ticket_list_screen.dart';
 import 'audit_scan_screen.dart';
+import 'instant_ticket_scan_screen.dart';
+import 'ticket_list_screen.dart';
 import 'change_password_screen.dart';
 import 'user_profile_screen.dart';
 import '../services/api_service.dart';
+import '../services/sync_service.dart';
+import '../services/database_service.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,382 +20,498 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _username = 'admin';
+  bool _isOnline = true;
+  Map<String, dynamic> _stats = {
+    'total_tickets': 0,
+    'in_progress': 0,
+    'completed': 0,
+    'total_assets': 0,
+    'scanned_assets': 0,
+  };
 
   @override
   void initState() {
     super.initState();
     _loadUserInfo();
+    _loadStats();
   }
 
   Future<void> _loadUserInfo() async {
-    final creds = await ApiService.getRememberCredentials();
-    if (creds['username'] != null && (creds['username'] as String).isNotEmpty) {
-      setState(() {
-        _username = creds['username'];
-      });
-    }
-  }
-
-  Future<void> _handleLogout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF091A33),
-        title: const Text('Đăng xuất', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text('Bạn có chắc chắn muốn thoát khỏi tài khoản?', style: TextStyle(color: Color(0xFF94A3B8))),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy', style: TextStyle(color: Color(0xFF94A3B8))),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
-            child: const Text('Thoát'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await ApiService.logout();
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+    final token = await ApiService.getToken();
+    if (token != null) {
+      final result = await ApiService.getUserProfile();
+      if (result['success'] == true && mounted) {
+        setState(() {
+          _username = result['user']?['username'] ?? 'admin';
+        });
       }
     }
   }
 
-  void _showNotice(String featureName) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline, color: Color(0xFF60A5FA), size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Tính năng "$featureName" đang được tối ưu.',
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF091A33),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.white.withOpacity(0.12)),
-        ),
-      ),
-    );
+  Future<void> _loadStats() async {
+    final stats = await ApiService.getAuditStats();
+    if (mounted) {
+      setState(() {
+        _stats = stats;
+        _isOnline = SyncService().isOnline;
+      });
+    }
   }
 
-  void _showManualLookupDialog() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF091A33),
-        title: const Text('Tra cứu Tag thủ công', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Nhập Tag, Hostname hoặc IP...',
-            hintStyle: const TextStyle(color: Color(0xFF64748B)),
-            filled: true,
-            fillColor: const Color(0xFF0D2242),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy', style: TextStyle(color: Color(0xFF94A3B8))),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final query = controller.text.trim();
-              if (query.isNotEmpty) {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => DeviceScanScreen(initialTag: query)),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
-            child: const Text('Tra cứu'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _logout() async {
+    await ApiService.logout();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF071326),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. App Header Title & Logo Robot
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Column(
+      appBar: AppBar(
+        title: const Text('Windows Agent'),
+        backgroundColor: const Color(0xFF091A33),
+        foregroundColor: Colors.white,
+        actions: [
+          // Status indicator
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _isOnline ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset(
-                          'assets/logo.jpg',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.smart_toy,
-                            color: Color(0xFF2563EB),
-                            size: 38,
-                          ),
-                        ),
-                      ),
+                    Icon(
+                      _isOnline ? Icons.cloud_done : Icons.cloud_off,
+                      color: Colors.white,
+                      size: 16,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Windows Agent',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                    const SizedBox(width: 4),
+                    Text(
+                      _isOnline ? 'Online' : 'Offline',
+                      style: const TextStyle(
                         color: Colors.white,
-                        letterSpacing: 0.5,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // 2. User Profile Bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF091A33),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+            ),
+          ),
+          PopupMenuButton(
+            color: const Color(0xFF091A33),
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                child: Row(
+                  children: [
+                    const Icon(Icons.person, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Hồ sơ',
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ],
                 ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const UserProfileScreen()),
+                  );
+                },
+              ),
+              PopupMenuItem(
                 child: Row(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.person, color: Color(0xFF071326), size: 24),
-                    ),
+                    const Icon(Icons.lock, color: Colors.white, size: 20),
                     const SizedBox(width: 12),
-                    Column(
+                    Text(
+                      'Đổi mật khẩu',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                  );
+                },
+              ),
+              PopupMenuItem(
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout, color: Color(0xFFEF4444), size: 20),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Đăng xuất',
+                      style: TextStyle(color: Color(0xFFEF4444)),
+                    ),
+                  ],
+                ),
+                onTap: _logout,
+              ),
+            ],
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFF0F172A),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _loadUserInfo();
+          _loadStats();
+        },
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. HEADER: Chào mừng người dùng
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Xin chào, $_username 👋',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Hôm nay là ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 2. DASHBOARD STATS
+                _buildStatsGrid(),
+                const SizedBox(height: 24),
+
+                // 3. SECTION 1: QUẢN LÝ THIẾT BỊ (3 tính năng / 1 hàng)
+                _buildSectionCard(
+                  title: 'Quản lý thiết bị',
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Xin chào,',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.qr_code_scanner,
+                            label: 'Quét thiết bị\nnhanh',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const DeviceScanScreen(),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        Text(
-                          _username,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.devices,
+                            label: 'Danh sách\nthiết bị',
+                            onTap: () => _showNotice('Danh sách thiết bị'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.info_outlined,
+                            label: 'Thông tin\nthiết bị',
+                            onTap: () => _showNotice('Thông tin thiết bị'),
+                          ),
                         ),
                       ],
                     ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: _handleLogout,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF071326),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        elevation: 0,
-                      ),
-                      child: const Text('Thoát', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 4. SECTION 2: KẾT NỐI MẠNG (3 tính năng / 1 hàng)
+                _buildSectionCard(
+                  title: 'Kết nối mạng',
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.router,
+                            label: 'Quét địa chỉ\nIP',
+                            onTap: () => _showNotice('Quét địa chỉ IP'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.language,
+                            label: 'Cấu hình\nmạng',
+                            onTap: () => _showNotice('Cấu hình mạng'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.speed,
+                            label: 'Tốc độ\nmạng',
+                            onTap: () => _showNotice('Tốc độ mạng'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-              // 3. SECTION 1: HỆ THỐNG (3 tính năng / 1 hàng)
-              _buildSectionCard(
-                title: 'Hệ thống',
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.article_outlined,
-                          label: 'Dashboard\nQuản trị',
-                          onTap: () => _showNotice('Dashboard Quản trị'),
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.lock_outline,
-                          label: 'Đổi mật\nkhẩu',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                            );
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.account_circle_outlined,
-                          label: 'Thông tin\nngười dùng',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const UserProfileScreen()),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // 4. SECTION 2: QUÉT MÃ QR CODE (3 tính năng / 1 hàng)
-              _buildSectionCard(
-                title: 'Quét mã QR Code',
-                badgeText: 'Live Camera',
-                badgeColor: const Color(0xFF1E3A8A),
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.qr_code_scanner,
-                          label: 'Scan Test\nQR Code',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
-                            );
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.search,
-                          label: 'Tra cứu Tag\nthủ công',
-                          onTap: _showManualLookupDialog,
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.computer_outlined,
-                          label: 'Danh sách\nthiết bị',
-                          onTap: () => _showNotice('Danh sách thiết bị'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // 5. SECTION 3: KIỂM KÊ TÀI SẢN (3 tính năng / 1 hàng)
-              _buildSectionCard(
-                title: 'Kiểm kê tài sản',
-                badgeText: '1 Đợt',
-                badgeColor: const Color(0xFF0C4A6E),
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.assignment_outlined,
-                          label: 'Phiếu\nkiểm kê',
-                          badgeCount: 1,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AuditTicketListScreen()),
-                            );
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.add,
-                          label: 'Tạo đợt\nkiểm kê',
-                          onTap: () => _showNotice('Tạo đợt kiểm kê'),
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildGridButton(
-                          icon: Icons.check,
-                          label: 'Quét kiểm\nkê nhanh',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AuditScanScreen(
-                                  ticketId: '1',
-                                  ticketTitle: 'Kiểm kê thiết bị',
+                // 5. SECTION 3: KIỂM KÊ TÀI SẢN (3 tính năng / 1 hàng)
+                _buildSectionCard(
+                  title: 'Kiểm kê tài sản',
+                  badgeText: '${_stats['in_progress']} đợt',
+                  badgeColor: const Color(0xFF0C4A6E),
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.assignment_outlined,
+                            label: 'Phiếu\nkiểm kê',
+                            badgeCount: _stats['in_progress'] as int? ?? 0,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AuditTicketListScreen(),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.flash_on_outlined,
+                            label: 'Kiểm kê\nnhanh',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const InstantTicketScanScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.assignment_turned_in_outlined,
+                            label: 'Quét theo\nphiếu',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const TicketListScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 6. SECTION 4: BÁO CÁO VÀ THỐNG KÊ (3 tính năng / 1 hàng)
+                _buildSectionCard(
+                  title: 'Báo cáo & thống kê',
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.bar_chart,
+                            label: 'Báo cáo\ntổng quan',
+                            onTap: () => _showNotice('Báo cáo tổng quan'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.pie_chart,
+                            label: 'Biểu đồ\nthống kê',
+                            onTap: () => _showNotice('Biểu đồ thống kê'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.download,
+                            label: 'Xuất\nbáo cáo',
+                            onTap: () => _showNotice('Xuất báo cáo'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 7. SECTION 5: CÀI ĐẶT (3 tính năng / 1 hàng)
+                _buildSectionCard(
+                  title: 'Cài đặt',
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.settings,
+                            label: 'Cài đặt\nchung',
+                            onTap: () => _showNotice('Cài đặt chung'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.notifications,
+                            label: 'Thông báo',
+                            onTap: () => _showNotice('Cài đặt thông báo'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGridButton(
+                            icon: Icons.info,
+                            label: 'Về ứng\ndụng',
+                            onTap: () => _showNotice('Về ứng dụng'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  // Dashboard Stats Grid
+  Widget _buildStatsGrid() {
+    final totalScanned = _stats['scanned_assets'] as int? ?? 0;
+    final totalAssets = _stats['total_assets'] as int? ?? 0;
+    final scanProgress = totalAssets > 0 ? (totalScanned / totalAssets * 100).toStringAsFixed(1) : '0.0';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF091A33),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatCard('Phiếu', '${_stats['total_tickets']}', Colors.blue),
+              _buildStatCard('Đang làm', '${_stats['in_progress']}', Colors.orange),
+              _buildStatCard('Hoàn thành', '${_stats['completed']}', Colors.green),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tiến độ quét',
+                      style: TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: totalAssets > 0 ? totalScanned / totalAssets : 0,
+                        backgroundColor: Colors.grey[800],
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF2563EB)),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                '$scanProgress%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$totalScanned/$totalAssets tài sản',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              Text(
+                'Cập nhật lúc ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(color: Colors.white30, fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Stat Card
+  Widget _buildStatCard(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white60, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  // Section Card
   Widget _buildSectionCard({
     required String title,
     String? badgeText,
@@ -399,100 +519,95 @@ class _HomeScreenState extends State<HomeScreen> {
     required List<Widget> children,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF091A33),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              if (badgeText != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: badgeColor ?? const Color(0xFF1E3A8A),
-                    borderRadius: BorderRadius.circular(12),
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                  child: Text(
-                    badgeText,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF60A5FA),
+                ),
+                if (badgeText != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (badgeColor ?? Colors.blue).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: badgeColor ?? Colors.blue),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        color: badgeColor ?? Colors.blue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          ...children,
+          // Divider
+          Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.08),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: children),
+          ),
         ],
       ),
     );
   }
 
+  // Grid Button
   Widget _buildGridButton({
     required IconData icon,
     required String label,
-    int? badgeCount,
+    int badgeCount = 0,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D2242),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xFF071326),
-                    size: 28,
-                  ),
-                ),
-                if (badgeCount != null && badgeCount > 0)
+                Icon(icon, color: const Color(0xFF2563EB), size: 28),
+                if (badgeCount > 0)
                   Positioned(
-                    top: -2,
-                    right: -2,
+                    top: -4,
+                    right: -4,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                       child: Text(
                         '$badgeCount',
                         style: const TextStyle(
@@ -500,32 +615,34 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 32,
-              child: Center(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.2,
-                  ),
-                ),
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.3,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotice(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$message - Coming Soon!'),
+        backgroundColor: const Color(0xFF2563EB),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
