@@ -104,7 +104,11 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final String? code = barcodes.first.rawValue;
+    // Chỉ xử lý QR Code, bỏ qua các định dạng khác
+    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qrCode).toList();
+    if (qrCodes.isEmpty) return;
+
+    final String? code = qrCodes.first.rawValue;
     if (code == null || code.trim().isEmpty) return;
 
     await _lookupTag(code);
@@ -584,6 +588,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
           MobileScanner(
             controller: _scannerController,
             onDetect: _onDetect,
+            formats: const [BarcodeFormat.qrCode], // Chỉ scan QR Code
           ),
 
           // Darkened background with central scan frame
