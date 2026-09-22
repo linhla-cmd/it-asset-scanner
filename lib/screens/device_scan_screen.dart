@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../services/api_service.dart';
 import '../services/database_service.dart';
 
 class DeviceScanScreen extends StatefulWidget {
@@ -19,7 +18,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
   bool _isFlashOn = false;
   bool _isBatchMode = false;
   int _batchCount = 0;
-  List<String> _batchResults = [];
+  final List<String> _batchResults = [];
   String? _lastScannedTag;
   bool _isLoading = false;
   bool _hasCameraPermission = false;
@@ -173,7 +172,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '✅ Đã xử lý ${_batchCount} thiết bị: $newCount mới, $existingCount đã có',
+            '✅ Đã xử lý $_batchCount thiết bị: $newCount mới, $existingCount đã có',
           ),
           backgroundColor: const Color(0xFF10B981),
         ),
@@ -296,7 +295,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withOpacity(0.8),
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(

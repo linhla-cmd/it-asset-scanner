@@ -164,16 +164,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withOpacity(0.1),
+                color: const Color(0xFF2563EB).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.3)),
+                border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB).withOpacity(0.2),
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -214,8 +214,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withOpacity(0.15),
-                  border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -347,7 +347,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF091A33),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

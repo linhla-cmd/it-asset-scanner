@@ -73,7 +73,7 @@ class SyncService {
     });
 
     // Schedule periodic sync
-    Future.delayed(Duration(minutes: _syncInterval), () async {
+    Future.delayed(const Duration(minutes: _syncInterval), () async {
       if (_isOnline) {
         await _performSync();
       }
@@ -105,7 +105,7 @@ class SyncService {
     } catch (e) {
       print('Sync error: $e');
       // Schedule retry
-      Future.delayed(Duration(minutes: _syncRetryInterval), _performSync);
+      Future.delayed(const Duration(minutes: _syncRetryInterval), _performSync);
     } finally {
       _isSyncing = false;
     }

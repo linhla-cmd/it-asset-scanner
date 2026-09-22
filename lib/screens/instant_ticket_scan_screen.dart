@@ -13,7 +13,7 @@ class InstantTicketScanScreen extends StatefulWidget {
 
 class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
   late MobileScannerController _scannerController;
-  List<String> _scannedAssets = [];
+  final List<String> _scannedAssets = [];
   bool _isProcessing = false;
   bool _isPaused = false;
 
@@ -42,11 +42,11 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
     if (_scannedAssets.contains(code)) {
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('⚠️ Đã quét mã này rồi!'),
+        const SnackBar(
+          content: Text('⚠️ Đã quét mã này rồi!'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 1),
+          duration: Duration(seconds: 1),
         ),
       );
       return;
@@ -114,7 +114,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF0D2242),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +227,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
                 // Overlay
                 if (_isPaused)
                   Container(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     child: const Center(
                       child: Text(
                         'QUÉT ĐÃ TẠMTẠM DỪNG',
@@ -250,7 +250,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
+                      border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -265,7 +265,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444).withOpacity(0.2),
+                                color: const Color(0xFFEF4444).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
@@ -280,13 +280,13 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
                   // Items list
                   Expanded(
                     child: _scannedAssets.isEmpty
-                        ? Center(
+                        ? const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.inbox_outlined, color: Colors.white30, size: 48),
-                                const SizedBox(height: 12),
-                                const Text(
+                                SizedBox(height: 12),
+                                Text(
                                   'Chưa quét tài sản nào',
                                   style: TextStyle(color: Colors.white60, fontSize: 13),
                                 ),
@@ -302,7 +302,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFF0D2242),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                               ),
                               child: Row(
                                 children: [
@@ -331,7 +331,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+                      border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                     ),
                     child: SizedBox(
                       width: double.infinity,

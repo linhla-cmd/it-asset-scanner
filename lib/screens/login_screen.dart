@@ -201,9 +201,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.15),
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.5)),
+                  border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.5)),
                 ),
                 child: const Icon(
                   Icons.lock_outlined,
@@ -238,8 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withOpacity(0.15),
-                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -275,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -310,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -329,7 +329,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Checkbox(
                         value: _rememberMe,
                         onChanged: (val) => setState(() => _rememberMe = val ?? false),
-                        fillColor: MaterialStateProperty.all(const Color(0xFF2563EB)),
+                        fillColor: WidgetStateProperty.all(const Color(0xFF2563EB)),
                         checkColor: Colors.white,
                       ),
                       const Text(

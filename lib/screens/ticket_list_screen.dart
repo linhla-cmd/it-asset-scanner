@@ -265,14 +265,14 @@ class _TicketListScreenState extends State<TicketListScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.2),
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.cloud_upload_outlined, color: const Color(0xFFFCD34D), size: 16),
+                        const Icon(Icons.cloud_upload_outlined, color: Color(0xFFFCD34D), size: 16),
                         const SizedBox(width: 4),
                         Text(
                           'Sync $_unSyncedCount',
@@ -342,13 +342,13 @@ class _TicketListScreenState extends State<TicketListScreen> {
                     ),
                   )
                 : _filteredTickets.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.inbox_outlined, color: Colors.white30, size: 64),
-                            const SizedBox(height: 16),
-                            const Text(
+                            SizedBox(height: 16),
+                            Text(
                               'Không có phiếu nào',
                               style: TextStyle(color: Colors.white60, fontSize: 14),
                             ),
@@ -382,7 +382,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
           color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF0D2242),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : Colors.white.withOpacity(0.1),
+            color: isSelected ? const Color(0xFF2563EB) : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         child: Text(
@@ -423,7 +423,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF091A33),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,9 +445,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.5)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.5)),
                   ),
                   child: Text(
                     statusLabel,
@@ -520,7 +520,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
                     icon: const Icon(Icons.download, color: Colors.white60, size: 16),
                     label: const Text('Tải về', style: TextStyle(color: Colors.white60, fontSize: 11)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
                     onPressed: () => _downloadTicket(ticketId),
@@ -551,9 +551,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withOpacity(0.15),
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
+                      border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
                     ),
                     child: const Icon(Icons.delete_outline, color: Color(0xFFF87171), size: 16),
                   ),

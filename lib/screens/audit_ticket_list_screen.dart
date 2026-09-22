@@ -173,9 +173,9 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withOpacity(0.2),
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
                         ),
                         child: const Row(
                           children: [
@@ -203,7 +203,7 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
                     ),
                   )
                 : _filteredTickets.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -212,8 +212,8 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
                               color: Colors.white30,
                               size: 64,
                             ),
-                            const SizedBox(height: 16),
-                            const Text(
+                            SizedBox(height: 16),
+                            Text(
                               'Không có phiếu nào',
                               style: TextStyle(color: Colors.white60, fontSize: 14),
                             ),
@@ -242,7 +242,7 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF0D2242),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [
@@ -251,7 +251,7 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down, color: Colors.white60, size: 16),
+            const Icon(Icons.arrow_drop_down, color: Colors.white60, size: 16),
           ],
         ),
       ),
@@ -294,7 +294,7 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF091A33),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,9 +316,9 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.5)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.5)),
                   ),
                   child: Text(
                     statusLabel,

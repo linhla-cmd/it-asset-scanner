@@ -158,7 +158,7 @@ class ApiService {
   }) async {
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        return await request().timeout(Duration(seconds: defaultTimeout));
+        return await request().timeout(const Duration(seconds: defaultTimeout));
       } catch (e) {
         if (attempt == maxAttempts) {
           print('[ApiService] Lỗi sau $maxAttempts lần thử: $e');

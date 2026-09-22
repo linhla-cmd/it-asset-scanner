@@ -26,7 +26,7 @@ class InstantTicketService {
           'notes': notes,
           'created_by': createdBy,
         }),
-      ).timeout(Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -54,7 +54,7 @@ class InstantTicketService {
           'asset_tag': assetTag,
           'scanned_by': scannedBy,
         }),
-      ).timeout(Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -80,7 +80,7 @@ class InstantTicketService {
         body: jsonEncode({
           'notes': notes,
         }),
-      ).timeout(Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);

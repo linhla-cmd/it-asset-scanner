@@ -14,7 +14,7 @@ class TicketListService {
         url += '?status=$status';
       }
 
-      final response = await http.get(Uri.parse(url)).timeout(Duration(seconds: 15));
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -35,7 +35,7 @@ class TicketListService {
     try {
       final response = await http
           .get(Uri.parse('$baseUrl/audit/tickets/$ticketId'))
-          .timeout(Duration(seconds: 15));
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -92,7 +92,7 @@ class TicketListService {
       print('✅ Đã download phiếu $ticketId offline');
     } catch (e) {
       print('❌ Lỗi download offline: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -195,7 +195,7 @@ class TicketListService {
         Uri.parse('$baseUrl/audit/tickets/$ticketId/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'notes': 'Synced from mobile'}),
-      ).timeout(Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         // Đánh dấu là đã sync

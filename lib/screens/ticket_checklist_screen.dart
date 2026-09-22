@@ -354,13 +354,13 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
                     ),
                   )
                 : _filteredItems.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.inbox_outlined, color: Colors.white30, size: 64),
-                            const SizedBox(height: 16),
-                            const Text(
+                            SizedBox(height: 16),
+                            Text(
                               'Không có item nào',
                               style: TextStyle(color: Colors.white60, fontSize: 14),
                             ),
@@ -433,7 +433,7 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
           color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF0D2242),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : Colors.white.withOpacity(0.1),
+            color: isSelected ? const Color(0xFF2563EB) : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         child: Text(
@@ -476,7 +476,7 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
           color: const Color(0xFF091A33),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : Colors.white.withOpacity(0.08),
+            color: isSelected ? const Color(0xFF2563EB) : Colors.white.withValues(alpha: 0.08),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -488,7 +488,7 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
                 child: Checkbox(
                   value: isSelected,
                   onChanged: (_) => _toggleItemSelection(assetTag),
-                  fillColor: MaterialStateProperty.all(
+                  fillColor: WidgetStateProperty.all(
                     isSelected ? const Color(0xFF2563EB) : Colors.transparent,
                   ),
                   checkColor: Colors.white,
@@ -534,9 +534,9 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
+                      color: statusColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor.withOpacity(0.5)),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.5)),
                     ),
                     child: Text(
                       statusLabel,

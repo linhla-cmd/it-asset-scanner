@@ -51,7 +51,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final totalScans = scanHistory.length;
       
       // Count completed tickets (example)
-      final completedTickets = 0; // TODO: Implement ticket counting
+      const completedTickets = 0; // TODO: Implement ticket counting
       
       setState(() {
         _userStats = {
@@ -120,7 +120,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               trailing: Switch(
                 value: true,
                 onChanged: (val) {},
-                activeColor: const Color(0xFF2563EB),
+                activeThumbColor: const Color(0xFF2563EB),
               ),
             ),
             _buildSettingItem(
@@ -129,7 +129,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               trailing: Switch(
                 value: true,
                 onChanged: (val) {},
-                activeColor: const Color(0xFF2563EB),
+                activeThumbColor: const Color(0xFF2563EB),
               ),
             ),
             _buildSettingItem(
@@ -138,7 +138,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               trailing: Switch(
                 value: true,
                 onChanged: (val) {},
-                activeColor: const Color(0xFF2563EB),
+                activeThumbColor: const Color(0xFF2563EB),
               ),
             ),
           ],
@@ -189,7 +189,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               width: 100,
                               height: 100,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF2563EB).withOpacity(0.2),
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: const Color(0xFF2563EB), width: 3),
                               ),
@@ -239,9 +239,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB).withOpacity(0.2),
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.5)),
+                            border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.5)),
                           ),
                           child: Text(
                             role,
@@ -366,17 +366,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF091A33),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                           ),
                           child: _activityLog.isEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.all(24),
+                              ? const Padding(
+                                  padding: EdgeInsets.all(24),
                                   child: Center(
                                     child: Column(
                                       children: [
                                         Icon(Icons.history, color: Colors.white30, size: 48),
-                                        const SizedBox(height: 12),
-                                        const Text(
+                                        SizedBox(height: 12),
+                                        Text(
                                           'Chưa có hoạt động nào',
                                           style: TextStyle(color: Colors.white60, fontSize: 13),
                                         ),
@@ -399,7 +399,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                             ? null
                                             : Border(
                                                 bottom: BorderSide(
-                                                  color: Colors.white.withOpacity(0.08),
+                                                  color: Colors.white.withValues(alpha: 0.08),
                                                 ),
                                               ),
                                       ),
@@ -408,7 +408,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                           Container(
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF2563EB).withOpacity(0.15),
+                                              color: const Color(0xFF2563EB).withValues(alpha: 0.15),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: const Icon(
@@ -471,7 +471,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF091A33),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

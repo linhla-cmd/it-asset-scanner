@@ -25,8 +25,8 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
   int _unexpectedItems = 0;
   int _missingItems = 0;
   
-  List<Map<String, dynamic>> _scannedList = [];
-  List<String> _scanHistory = [];
+  final List<Map<String, dynamic>> _scannedList = [];
+  final List<String> _scanHistory = [];
 
   @override
   void initState() {
@@ -201,7 +201,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
+                border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -232,7 +232,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF0D2242),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: color.withOpacity(0.3)),
+                      border: Border.all(color: color.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -362,7 +362,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
             children: [
               // Top: Large counter
               Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                 child: Column(
                   children: [
@@ -416,7 +416,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
 
               // Bottom: Stats & Controls
               Container(
-                color: Colors.black.withOpacity(0.6),
+                color: Colors.black.withValues(alpha: 0.6),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
@@ -439,7 +439,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
                             icon: const Icon(Icons.undo, color: Colors.white60, size: 18),
                             label: const Text('Hoàn tác', style: TextStyle(color: Colors.white60, fontSize: 12)),
                             style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                             onPressed: _undoLastScan,
@@ -452,7 +452,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
                             label: const Text('Danh sách', style: TextStyle(color: Colors.white, fontSize: 12)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D2242),
-                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                             onPressed: _showScannedList,
@@ -470,7 +470,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
                             icon: const Icon(Icons.details, color: Colors.white60, size: 18),
                             label: const Text('Chi tiết', style: TextStyle(color: Colors.white60, fontSize: 12)),
                             style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                             onPressed: () {
@@ -506,7 +506,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
           // Pause overlay
           if (_isPaused)
             Container(
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withValues(alpha: 0.7),
               child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -534,9 +534,9 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [

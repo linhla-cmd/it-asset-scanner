@@ -19,7 +19,7 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
   int _scannedItems = 0;
   int _matchedItems = 0;
   int _unexpectedItems = 0;
-  List<String> _scanHistory = [];
+  final List<String> _scanHistory = [];
   List<Map<String, dynamic>> _ticketItems = [];
   bool _isPaused = false;
 
@@ -250,7 +250,7 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
             children: [
               // Top: Counter display
               Container(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
@@ -337,15 +337,15 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
+                          color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Column(
+                        child: const Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.pause_circle_outline, color: Colors.white, size: 48),
-                            const SizedBox(height: 12),
-                            const Text(
+                            SizedBox(height: 12),
+                            Text(
                               'QUÉT ĐÃ TẠMTẠM DỪNG',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
@@ -358,7 +358,7 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
 
               // Bottom: Stats and controls
               Container(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
@@ -380,7 +380,7 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
                             icon: const Icon(Icons.undo, color: Colors.white60),
                             label: const Text('Hoàn tác', style: TextStyle(color: Colors.white60)),
                             style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                             onPressed: _undoLastScan,
@@ -414,9 +414,9 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -516,7 +516,7 @@ class ScanFramePainter extends CustomPainter {
     // Draw dimmed background
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint()..color = Colors.black.withOpacity(0.3),
+      Paint()..color = Colors.black.withValues(alpha: 0.3),
     );
 
     // Clear the scanning area
