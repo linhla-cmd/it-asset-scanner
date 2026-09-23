@@ -203,17 +203,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
       }
     }
 
-    if (code.isNotEmpty) {
-      return AssetInfo(
-        assetCode: code,
-        machineName: 'DESKTOP-${code.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
-        currentUser: 'Nhân viên IT (Đang sử dụng)',
-        ipAddress: '192.168.1.150',
-        processor: 'Intel Core i5 Gen 12th',
-        ram: '16 GB RAM',
-      );
-    }
-
+    // Không tìm thấy trong mock database → trả null
     return null;
   }
 
