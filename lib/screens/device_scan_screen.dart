@@ -552,6 +552,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -598,6 +599,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                           label: const Text('Quét mã khác'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -621,6 +623,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                         label: const Text('Cập nhật người sử dụng'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
                           minimumSize: const Size(double.infinity, 46),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -636,6 +639,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                               label: const Text('Cập nhật IP'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0284C7),
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -656,6 +660,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                               label: const Text('Báo hỏng'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFDC2626),
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
