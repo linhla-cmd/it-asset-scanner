@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/api_service.dart';
-import '../services/database_service.dart';
 
 class InventoryMappingScreen extends StatefulWidget {
   const InventoryMappingScreen({super.key});
@@ -133,11 +131,11 @@ class _InventoryMappingScreenState extends State<InventoryMappingScreen> {
                           value: _selectedOrderId,
                           isExpanded: true,
                           hint: const Text('Chọn đơn hàng...'),
-                          items: _orders.map((order) {
-                            final orderId = order['ticket_id'] ?? order['id'] ?? '';
-                            final orderCode = order['po_code'] ?? orderId;
-                            final itemCount = order['item_count'] ?? 0;
-                            return DropdownMenuItem(
+                          items: _orders.map<DropdownMenuItem<String>>((order) {
+                            final orderId = (order['ticket_id'] ?? order['id'] ?? '').toString();
+                            final orderCode = (order['po_code'] ?? orderId).toString();
+                            final itemCount = (order['item_count'] ?? 0).toString();
+                            return DropdownMenuItem<String>(
                               value: orderId,
                               child: Text(
                                 'PO: $orderCode - ($itemCount)',
