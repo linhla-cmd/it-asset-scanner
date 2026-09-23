@@ -49,7 +49,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
         });
       }
     } catch (e) {
-      print('Error loading ticket stats: $e');
+      // print('Error loading ticket stats: $e');
     }
   }
 
@@ -59,7 +59,7 @@ class _TicketBasedScanScreenState extends State<TicketBasedScanScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qr).toList();
+    final qrCodes = barcodes.where((b) => b.format == BarcodeFormat.qrCode).toList();
     if (qrCodes.isEmpty) return;
 
     final String? code = qrCodes.first.rawValue;

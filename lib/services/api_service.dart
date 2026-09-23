@@ -161,13 +161,13 @@ class ApiService {
         return await request().timeout(const Duration(seconds: defaultTimeout));
       } catch (e) {
         if (attempt == maxAttempts) {
-          print('[ApiService] Lỗi sau $maxAttempts lần thử: $e');
+          // print('[ApiService] Lỗi sau $maxAttempts lần thử: $e');
           return null;
         }
         
         // Exponential backoff: 1s, 2s, 4s
         final delayMs = (1000 * (attempt)).toInt();
-        print('[ApiService] Lần thử $attempt thất bại, chờ ${delayMs}ms...');
+        // print('[ApiService] Lần thử $attempt thất bại, chờ ${delayMs}ms...');
         await Future.delayed(Duration(milliseconds: delayMs));
       }
     }
@@ -348,7 +348,7 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      print('[ApiService] Lỗi getAllAuditTickets: $e');
+      // print('[ApiService] Lỗi getAllAuditTickets: $e');
       return [];
     }
   }
@@ -380,7 +380,7 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print('[ApiService] Lỗi getAuditTicketDetail: $e');
+      // print('[ApiService] Lỗi getAuditTicketDetail: $e');
       return null;
     }
   }
@@ -502,7 +502,7 @@ class ApiService {
         'scanned_assets': 0,
       };
     } catch (e) {
-      print('[ApiService] Lỗi getAuditStats: $e');
+      // print('[ApiService] Lỗi getAuditStats: $e');
       return {
         'total_tickets': 0,
         'in_progress': 0,
@@ -525,7 +525,7 @@ class ApiService {
       }
       return {'success': false, 'items': []};
     } catch (e) {
-      print('[ApiService] Lỗi getTicketItems: $e');
+      // print('[ApiService] Lỗi getTicketItems: $e');
       return {'success': false, 'items': []};
     }
   }

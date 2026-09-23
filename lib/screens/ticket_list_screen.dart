@@ -51,7 +51,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
         });
       }
     } catch (e) {
-      print('Error loading tickets: $e');
+      // print('Error loading tickets: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

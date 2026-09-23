@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
-import '../services/database_service.dart';
+// import '../services/database_service.dart';  // Unused
 
 class InstantTicketScanScreen extends StatefulWidget {
   const InstantTicketScanScreen({super.key});
@@ -32,7 +32,7 @@ class _InstantTicketScanScreenState extends State<InstantTicketScanScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qr).toList();
+    final qrCodes = barcodes.where((b) => b.format == BarcodeFormat.qrCode).toList();
     if (qrCodes.isEmpty) return;
 
     final String? code = qrCodes.first.rawValue;

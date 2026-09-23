@@ -103,7 +103,7 @@ class SyncService {
       _lastFullSync = DateTime.now();
       await _saveLastSyncTimestamps();
     } catch (e) {
-      print('Sync error: $e');
+      // print('Sync error: $e');
       // Schedule retry
       Future.delayed(const Duration(minutes: _syncRetryInterval), _performSync);
     } finally {
@@ -142,7 +142,7 @@ class SyncService {
           );
         }
       } catch (e) {
-        print('Failed to sync ticket ${ticket['ticket_id']}: $e');
+        // print('Failed to sync ticket ${ticket['ticket_id']}: $e');
       }
 
       _syncProgress++;
@@ -179,7 +179,7 @@ class SyncService {
           );
         }
       } catch (e) {
-        print('Failed to sync scan ${scan['asset_tag']}: $e');
+        // print('Failed to sync scan ${scan['asset_tag']}: $e');
       }
 
       _syncProgress++;
@@ -217,7 +217,7 @@ class SyncService {
           );
         }
       } catch (e) {
-        print('Failed to sync device ${device['asset_tag']}: $e');
+        // print('Failed to sync device ${device['asset_tag']}: $e');
       }
 
       _syncProgress++;

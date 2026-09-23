@@ -36,7 +36,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         setState(() => _userInfo = response['user'] ?? {});
       }
     } catch (e) {
-      print('Error loading profile: $e');
+      // print('Error loading profile: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -62,7 +62,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         };
       });
     } catch (e) {
-      print('Error loading stats: $e');
+      // print('Error loading stats: $e');
     }
   }
 
@@ -85,7 +85,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         }).toList();
       });
     } catch (e) {
-      print('Error loading activity log: $e');
+      // print('Error loading activity log: $e');
     }
   }
 

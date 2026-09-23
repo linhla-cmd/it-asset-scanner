@@ -43,7 +43,7 @@ class _AuditTicketListScreenState extends State<AuditTicketListScreen> {
         });
       }
     } catch (e) {
-      print('Error loading tickets: $e');
+      // print('Error loading tickets: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

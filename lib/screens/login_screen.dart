@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isBiometricAvailable = true);
       }
     } catch (e) {
-      print('Biometric check error: $e');
+      // print('Biometric check error: $e');
     }
   }
 
@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print('Biometric auth error: $e');
+      // print('Biometric auth error: $e');
     }
   }
 

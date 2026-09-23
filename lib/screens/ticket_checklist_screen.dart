@@ -37,7 +37,7 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
         });
       }
     } catch (e) {
-      print('Error loading items: $e');
+      // print('Error loading items: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

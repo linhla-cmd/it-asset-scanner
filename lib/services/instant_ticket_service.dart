@@ -117,7 +117,7 @@ class InstantTicketService {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
-      print('Lỗi lưu draft: $e');
+      // print('Lỗi lưu draft: $e');
     }
   }
 
@@ -131,7 +131,7 @@ class InstantTicketService {
         whereArgs: [0],
       );
     } catch (e) {
-      print('Lỗi lấy draft: $e');
+      // print('Lỗi lấy draft: $e');
       return [];
     }
   }
@@ -161,7 +161,7 @@ class InstantTicketService {
       }
       return false;
     } catch (e) {
-      print('Lỗi sync draft: $e');
+      // print('Lỗi sync draft: $e');
       return false;
     }
   }
@@ -175,7 +175,7 @@ class InstantTicketService {
         await syncDraft(draft);
       }
     } catch (e) {
-      print('Lỗi auto-sync: $e');
+      // print('Lỗi auto-sync: $e');
     }
   }
 }

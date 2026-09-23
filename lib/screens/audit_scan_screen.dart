@@ -20,7 +20,7 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
   int _matchedItems = 0;
   int _unexpectedItems = 0;
   final List<String> _scanHistory = [];
-  List<Map<String, dynamic>> _ticketItems = [];
+  // List<Map<String, dynamic>> _ticketItems = [];  // Unused field
   bool _isPaused = false;
 
   @override
@@ -39,12 +39,12 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
       if (response['success'] == true && mounted) {
         final items = List<Map<String, dynamic>>.from(response['items'] ?? []);
         setState(() {
-          _ticketItems = items;
+          // _ticketItems = items;  // Unused field
           _totalItems = items.length;
         });
       }
     } catch (e) {
-      print('Error loading ticket items: $e');
+      // print('Error loading ticket items: $e');
     }
   }
 
@@ -54,7 +54,7 @@ class _AuditScanScreenState extends State<AuditScanScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final qrCodes = barcodes.where((b) => b.type == BarcodeType.qr).toList();
+    final qrCodes = barcodes.where((b) => b.format == BarcodeFormat.qrCode).toList();
     if (qrCodes.isEmpty) return;
 
     final String? code = qrCodes.first.rawValue;

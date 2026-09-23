@@ -89,9 +89,9 @@ class TicketListService {
         );
       }
 
-      print('✅ Đã download phiếu $ticketId offline');
+      // print('✅ Đã download phiếu $ticketId offline');
     } catch (e) {
-      print('❌ Lỗi download offline: $e');
+      // print('❌ Lỗi download offline: $e');
       rethrow;
     }
   }
@@ -102,7 +102,7 @@ class TicketListService {
       final db = await DatabaseService.instance.database;
       return await db.query('audit_tickets_offline', orderBy: 'downloaded_at DESC');
     } catch (e) {
-      print('Lỗi lấy phiếu offline: $e');
+      // print('Lỗi lấy phiếu offline: $e');
       return [];
     }
   }
@@ -118,7 +118,7 @@ class TicketListService {
         orderBy: 'asset_tag ASC',
       );
     } catch (e) {
-      print('Lỗi lấy items offline: $e');
+      // print('Lỗi lấy items offline: $e');
       return [];
     }
   }
@@ -143,7 +143,7 @@ class TicketListService {
         whereArgs: [ticketId, assetTag.toUpperCase()],
       );
     } catch (e) {
-      print('Lỗi cập nhật item: $e');
+      // print('Lỗi cập nhật item: $e');
     }
   }
 
@@ -179,7 +179,7 @@ class TicketListService {
         'missing': (missing[0]['cnt'] as int?) ?? 0,
       };
     } catch (e) {
-      print('Lỗi thống kê: $e');
+      // print('Lỗi thống kê: $e');
       return {'total': 0, 'matched': 0, 'unexpected': 0, 'missing': 0};
     }
   }
@@ -206,12 +206,12 @@ class TicketListService {
           where: 'ticket_id = ?',
           whereArgs: [ticketId],
         );
-        print('✅ Đã sync phiếu $ticketId');
+        // print('✅ Đã sync phiếu $ticketId');
         return true;
       }
       return false;
     } catch (e) {
-      print('❌ Lỗi sync: $e');
+      // print('❌ Lỗi sync: $e');
       return false;
     }
   }
@@ -233,7 +233,7 @@ class TicketListService {
         );
       }
     } catch (e) {
-      print('Lỗi auto-sync: $e');
+      // print('Lỗi auto-sync: $e');
     }
   }
 }

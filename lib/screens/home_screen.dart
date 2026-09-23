@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'device_scan_screen.dart';
 import 'audit_ticket_list_screen.dart';
-import 'audit_scan_screen.dart';
+// import 'audit_scan_screen.dart';  // Unused
 import 'instant_ticket_scan_screen.dart';
 import 'ticket_list_screen.dart';
 import 'change_password_screen.dart';
 import 'user_profile_screen.dart';
 import '../services/api_service.dart';
-import '../services/sync_service.dart';
-import '../services/database_service.dart';
+// import '../services/sync_service.dart';  // Unused
+// import '../services/database_service.dart';  // Unused
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {

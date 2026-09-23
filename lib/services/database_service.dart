@@ -176,37 +176,37 @@ class DatabaseService {
       try {
         await db.execute('ALTER TABLE audit_tickets_offline ADD COLUMN synced_at TEXT');
       } catch (e) {
-        print('[DatabaseService] Column synced_at already exists');
+        // print('[DatabaseService] Column synced_at already exists');
       }
 
       try {
         await db.execute('ALTER TABLE audit_items_offline ADD COLUMN synced INTEGER DEFAULT 0');
       } catch (e) {
-        print('[DatabaseService] Column synced already exists in audit_items_offline');
+        // print('[DatabaseService] Column synced already exists in audit_items_offline');
       }
 
       try {
         await db.execute('ALTER TABLE audit_items_offline ADD COLUMN synced_at TEXT');
       } catch (e) {
-        print('[DatabaseService] Column synced_at already exists in audit_items_offline');
+        // print('[DatabaseService] Column synced_at already exists in audit_items_offline');
       }
 
       try {
         await db.execute('ALTER TABLE instant_ticket_drafts ADD COLUMN synced_at TEXT');
       } catch (e) {
-        print('[DatabaseService] Column synced_at already exists in instant_ticket_drafts');
+        // print('[DatabaseService] Column synced_at already exists in instant_ticket_drafts');
       }
 
       try {
         await db.execute('ALTER TABLE scanned_history ADD COLUMN synced INTEGER DEFAULT 0');
       } catch (e) {
-        print('[DatabaseService] Column synced already exists in scanned_history');
+        // print('[DatabaseService] Column synced already exists in scanned_history');
       }
 
       try {
         await db.execute('ALTER TABLE sync_status ADD COLUMN last_error_at TEXT');
       } catch (e) {
-        print('[DatabaseService] Column last_error_at already exists');
+        // print('[DatabaseService] Column last_error_at already exists');
       }
 
       // Create new tables
@@ -223,7 +223,7 @@ class DatabaseService {
           )
         ''');
       } catch (e) {
-        print('[DatabaseService] scan_history table already exists');
+        // print('[DatabaseService] scan_history table already exists');
       }
 
       try {
@@ -236,7 +236,7 @@ class DatabaseService {
           )
         ''');
       } catch (e) {
-        print('[DatabaseService] user_settings table already exists');
+        // print('[DatabaseService] user_settings table already exists');
       }
 
       try {
@@ -250,7 +250,7 @@ class DatabaseService {
           )
         ''');
       } catch (e) {
-        print('[DatabaseService] statistics table already exists');
+        // print('[DatabaseService] statistics table already exists');
       }
     }
   }
