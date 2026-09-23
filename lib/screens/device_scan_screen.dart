@@ -708,7 +708,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
             children: [
               const Text(
                 'MÃ TÀI SẢN',
-                style: TextStyle(fontSize: 12, color: Color(0xFFA0AEC0), fontWeight: FontWeight.bold, letterSpacing: 1),
+                style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -752,7 +752,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: Color(0xFFA0AEC0)),
+                style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 2),
               Text(
