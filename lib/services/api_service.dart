@@ -81,14 +81,12 @@ class ApiService {
   static Future<Map<String, dynamic>> getDeviceDetail(String assetCode) async {
     try {
       final baseUrl = await getBaseUrl();
-      final token = await getToken();
-      final url = Uri.parse('$baseUrl/api/devices/$assetCode');
+      final url = Uri.parse('$baseUrl/api/assets/search').replace(queryParameters: {'q': assetCode});
 
       final response = await _retryRequest(() => http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
       ));
 
@@ -98,14 +96,17 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic>) {
+        if (data is Map<String, dynamic> && data['success'] == true) {
           return {
             'success': true,
-            'device': data['device'] ?? data['data'] ?? data,
+            'device': data['data'] ?? {},
           };
         }
+      } else if (response.statusCode == 404) {
+        final data = jsonDecode(response.body);
+        return {'success': false, 'message': data['message'] ?? 'Không tìm thấy tài sản'};
       }
-      return {'success': false, 'message': 'Không tìm thấy thiết bị (${response.statusCode})'};
+      return {'success': false, 'message': 'Lỗi từ máy chủ (${response.statusCode})'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối API: $e'};
     }
