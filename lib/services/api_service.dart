@@ -211,6 +211,44 @@ class ApiService {
     }
   }
 
+  // Cập nhật địa chỉ IP thiết bị từ Mobile App (Yêu cầu quyền Admin)
+  static Future<Map<String, dynamic>> updateDeviceIp({
+    required String assetTag,
+    required String ipAddress,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/devices/update-ip');
+      final response = await _retryRequest(() => http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'asset_tag': assetTag,
+          'ip_address': ipAddress,
+        }),
+      ));
+      if (response == null) {
+        return {'success': false, 'message': 'Không kết nối được máy chủ'};
+      }
+      if (response.statusCode == 403) {
+        return {'success': false, 'message': 'Bạn không có quyền Admin để cập nhật IP'};
+      }
+      if (response.statusCode == 401) {
+        return {'success': false, 'message': 'Chưa đăng nhập hoặc phiên hết hạn'};
+      }
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      return {'success': false, 'message': 'Lỗi cập nhật (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
   // Cập nhật người sử dụng thiết bị từ Mobile App (Yêu cầu quyền Admin)
   static Future<Map<String, dynamic>> updateDeviceUser({
     required String assetTag,

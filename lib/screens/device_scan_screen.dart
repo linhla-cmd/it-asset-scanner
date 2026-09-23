@@ -216,6 +216,122 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
     });
   }
 
+  void _showUpdateIpDialog(BuildContext context) {
+    final ipController = TextEditingController(text: _currentAsset?.ipAddress ?? '');
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A2847),
+          title: const Text(
+            'Cập nhật Địa chỉ IP',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tên máy: ${_currentAsset?.machineName}',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ipController,
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Nhập địa chỉ IP (VD: 192.168.1.100)...',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F1729),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF0284C7)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (isLoading)
+                const SizedBox(
+                  height: 40,
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF0284C7)),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final newIp = ipController.text.trim();
+                      if (newIp.isEmpty) return;
+                      setDialogState(() => isLoading = true);
+                      final result = await ApiService.updateDeviceIp(
+                        assetTag: _currentAsset!.assetCode,
+                        ipAddress: newIp,
+                      );
+                      if (!mounted) return;
+                      setDialogState(() => isLoading = false);
+                      if (result['success'] == true) {
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Đã cập nhật IP thành công!'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                        setState(() {
+                          _currentAsset = AssetInfo(
+                            assetCode: _currentAsset!.assetCode,
+                            machineName: _currentAsset!.machineName,
+                            currentUser: _currentAsset!.currentUser,
+                            ipAddress: newIp,
+                            processor: _currentAsset!.processor,
+                            ram: _currentAsset!.ram,
+                          );
+                        });
+                      } else {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(result['message'] ?? 'Không cập nhật được IP'),
+                            backgroundColor: const Color(0xFFEF4444),
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0284C7),
+                disabledBackgroundColor: Colors.grey[600],
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Lưu'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showUpdateUserDialog(BuildContext context) {
     final userController = TextEditingController(text: _currentAsset?.currentUser ?? '');
     bool isLoading = false;
@@ -515,14 +631,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Đang mở chức năng cập nhật IP cho máy: ${_currentAsset!.machineName}'),
-                                    backgroundColor: const Color(0xFF0284C7),
-                                  ),
-                                );
-                              },
+                              onPressed: () => _showUpdateIpDialog(context),
                               icon: const Icon(Icons.edit_location_alt, size: 18),
                               label: const Text('Cập nhật IP'),
                               style: ElevatedButton.styleFrom(
