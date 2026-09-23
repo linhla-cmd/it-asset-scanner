@@ -175,10 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const InstantTicketScanScreen(
-                              ticketId: '1',
-                              ticketTitle: 'Kiểm kê thiết bị',
-                            ),
+                            builder: (_) => const InstantTicketScanScreen(),
                           ),
                         ),
                       ),
