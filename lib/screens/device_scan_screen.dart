@@ -216,6 +216,107 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
     });
   }
 
+  void _showUpdateUserDialog(BuildContext context) {
+    final userController = TextEditingController(_currentAsset?.currentUser ?? '');
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A2847),
+          title: const Text(
+            'Cập nhật người sử dụng',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Mã tài sản: ${_currentAsset?.assetCode}',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: userController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Nhập tên người sử dụng...',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F1729),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (isLoading)
+                const SizedBox(
+                  height: 40,
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF2563EB)),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setDialogState(() => isLoading = true);
+                      final result = await ApiService.updateDeviceUser(
+                        assetTag: _currentAsset!.assetCode,
+                        assetUser: userController.text.trim(),
+                      );
+                      if (!mounted) return;
+                      setDialogState(() => isLoading = false);
+                      if (result['success'] == true) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Đã cập nhật người sử dụng thành công!'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                        setState(() {
+                          _currentAsset = AssetInfo(
+                            assetCode: _currentAsset!.assetCode,
+                            machineName: _currentAsset!.machineName,
+                            currentUser: userController.text.trim(),
+                            ipAddress: _currentAsset!.ipAddress,
+                            processor: _currentAsset!.processor,
+                            ram: _currentAsset!.ram,
+                          );
+                        });
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(result['message'] ?? 'Không cập nhật được'),
+                            backgroundColor: const Color(0xFFEF4444),
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                disabledBackgroundColor: Colors.grey[600],
+              ),
+              child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white))) : const Text('Lưu'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -395,6 +496,18 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                     children: [
                       _buildAssetCard(_currentAsset!),
                       const SizedBox(height: 14),
+                      ElevatedButton.icon(
+                        onPressed: () => _showUpdateUserDialog(context),
+                        icon: const Icon(Icons.person_add_alt_1, size: 18),
+                        label: const Text('Cập nhật người sử dụng'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          minimumSize: const Size(double.infinity, 46),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(

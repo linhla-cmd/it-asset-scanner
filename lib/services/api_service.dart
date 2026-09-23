@@ -180,6 +180,75 @@ class ApiService {
     }
   }
 
+  // Ghi nhận lịch sử quét từ Mobile App
+  static Future<Map<String, dynamic>> logScan({
+    required String assetTag,
+    String? scannedBy,
+    String scanSource = 'MOBILE_SCAN',
+    String? ipAddress,
+    String? deviceInfo,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final url = Uri.parse('$baseUrl/api/scan/log');
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'asset_tag': assetTag,
+          'scanned_by': scannedBy,
+          'scan_source': scanSource,
+          'ip_address': ipAddress,
+          'device_info': deviceInfo,
+        }),
+      ));
+      if (response != null && response.statusCode == 200) {
+        return {'success': true};
+      }
+      return {'success': false, 'message': 'Không ghi được log quét'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  // Cập nhật người sử dụng thiết bị từ Mobile App (Yêu cầu quyền Admin)
+  static Future<Map<String, dynamic>> updateDeviceUser({
+    required String assetTag,
+    required String assetUser,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/devices/update-user');
+      final response = await _retryRequest(() => http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'asset_tag': assetTag,
+          'asset_user': assetUser,
+        }),
+      ));
+      if (response == null) {
+        return {'success': false, 'message': 'Không kết nối được máy chủ'};
+      }
+      if (response.statusCode == 403) {
+        return {'success': false, 'message': 'Bạn không có quyền Admin để cập nhật'};
+      }
+      if (response.statusCode == 401) {
+        return {'success': false, 'message': 'Chưa đăng nhập hoặc phiên hết hạn'};
+      }
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      return {'success': false, 'message': 'Lỗi cập nhật (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
