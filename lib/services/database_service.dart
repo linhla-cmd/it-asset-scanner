@@ -19,7 +19,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,  // Bump from 3 to 4 to trigger upgrade with new devices table
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -100,6 +100,16 @@ class DatabaseService {
         error_message TEXT,
         retry_count INTEGER DEFAULT 0,
         last_error_at TEXT
+      )
+    ''');
+
+    // Bảng lưu thiết bị (devices) - để quét QR test
+    await db.execute('''
+      CREATE TABLE devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_tag TEXT UNIQUE NOT NULL,
+        hostname TEXT,
+        scanned_at TEXT
       )
     ''');
 
@@ -253,7 +263,22 @@ class DatabaseService {
         // print('[DatabaseService] statistics table already exists');
       }
     }
-  }
+
+    if (oldVersion < 4) {
+      // Upgrade to version 4: add devices table for QR scan test
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_tag TEXT UNIQUE NOT NULL,
+            hostname TEXT,
+            scanned_at TEXT
+          )
+        ''');
+      } catch (e) {
+        // print('[DatabaseService] devices table already exists');
+      }
+    }
 
   // Thêm scan vào lịch sử
   Future<void> addScanHistory(String ticketId, String assetTag, String status) async {
