@@ -279,7 +279,9 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                       if (!mounted) return;
                       setDialogState(() => isLoading = false);
                       if (result['success'] == true) {
+                        if (!mounted) return;
                         Navigator.pop(ctx);
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Đã cập nhật người sử dụng thành công!'),
@@ -297,6 +299,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                           );
                         });
                       } else {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(result['message'] ?? 'Không cập nhật được'),
@@ -309,7 +312,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
                 backgroundColor: const Color(0xFF10B981),
                 disabledBackgroundColor: Colors.grey[600],
               ),
-              child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white))) : const Text('Lưu'),
+              child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Text('Lưu'),
             ),
           ],
         ),
