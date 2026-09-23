@@ -35,7 +35,7 @@ class SyncService {
   // Check connectivity
   Future<void> _checkConnectivity() async {
     final connectivityResult = await Connectivity().checkConnectivity();
-    _isOnline = connectivityResult != ConnectivityResult.none;
+    _isOnline = !connectivityResult.contains(ConnectivityResult.none);
   }
 
   // Load last sync timestamps
@@ -64,7 +64,7 @@ class SyncService {
     // Check connectivity every minute
     Connectivity().onConnectivityChanged.listen((result) async {
       final wasOnline = _isOnline;
-      _isOnline = result != ConnectivityResult.none;
+      _isOnline = !result.contains(ConnectivityResult.none);
 
       if (_isOnline && !wasOnline) {
         // Just came online - perform sync
