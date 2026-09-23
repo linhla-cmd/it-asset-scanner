@@ -14,7 +14,7 @@ class DeviceScanScreen extends StatefulWidget {
 
 class _DeviceScanScreenState extends State<DeviceScanScreen> {
   final MobileScannerController _scannerController = MobileScannerController();
-  bool _isScanning = false;
+  bool _isScanning = true;  // FIX: Set to true by default so scanner works
   bool _isFlashOn = false;
   bool _isBatchMode = false;
   int _batchCount = 0;
