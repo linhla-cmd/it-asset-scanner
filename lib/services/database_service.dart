@@ -279,6 +279,7 @@ class DatabaseService {
         // print('[DatabaseService] devices table already exists');
       }
     }
+  }
 
   // Thêm scan vào lịch sử
   Future<void> addScanHistory(String ticketId, String assetTag, String status) async {
