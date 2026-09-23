@@ -217,7 +217,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
   }
 
   void _showUpdateUserDialog(BuildContext context) {
-    final userController = TextEditingController(_currentAsset?.currentUser ?? '');
+    final userController = TextEditingController(text: _currentAsset?.currentUser ?? '');
     bool isLoading = false;
 
     showDialog(
