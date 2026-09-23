@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.company.itasset.it_asset_scanner"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34  // Updated from 33 to fix AndroidX dependencies
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
