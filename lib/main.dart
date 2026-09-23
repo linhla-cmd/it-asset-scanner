@@ -11,13 +11,13 @@ void main() async {
   try {
     // Khởi tạo Database
     await DatabaseService.instance.database;
-    logger.i('✅ Database initialized');
+    // logger.i('✅ Database initialized');
     
     // Khởi tạo SyncService (auto-sync khi có mạng)
     await SyncService.instance.initialize();
-    logger.i('✅ SyncService initialized');
+    // logger.i('✅ SyncService initialized');
   } catch (e) {
-    logger.e('❌ Initialization error: $e');
+    // logger.e('❌ Initialization error: $e');
   }
   
   runApp(const MyApp());

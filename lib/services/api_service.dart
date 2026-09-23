@@ -73,7 +73,7 @@ class ApiService {
     await prefs.setBool('biometric_enabled', true);
   }
 
-  static Future<List<dynamic>> getAuditTickets() async {
+  static Future<Map<String, dynamic>> getAuditTickets() async {
     return await getAllAuditTickets();
   }
 
@@ -354,7 +354,7 @@ class ApiService {
   }
 
   // 3b. Alias cho getApprovedAuditTickets
-  static Future<List<dynamic>> getApprovedAuditTickets() async {
+  static Future<Map<String, dynamic>> getApprovedAuditTickets() async {
     return getAllAuditTickets();
   }
 
