@@ -5,8 +5,6 @@ import 'services/api_service.dart';
 import 'services/database_service.dart';
 import 'services/sync_service.dart';
 
-final logger = Logger();
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   

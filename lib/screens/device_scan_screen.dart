@@ -43,6 +43,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
       await _scannerController.toggleTorch();
       setState(() => _isFlashOn = !_isFlashOn);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ Lỗi điều khiển đèn flash: $e'),
@@ -105,6 +106,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
       if (existing.isNotEmpty) {
         // Device exists - show info
         final device = existing.first;
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -121,6 +123,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
           'scanned_at': DateTime.now().toIso8601String(),
         });
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ Thêm thiết bị mới: $code'),
@@ -129,6 +132,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ Lỗi xử lý quét: $e'),
@@ -169,6 +173,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
         }
       }
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -183,6 +188,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
         _batchResults.clear();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ Lỗi xử lý batch: $e'),

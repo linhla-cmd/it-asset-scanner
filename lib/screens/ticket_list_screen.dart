@@ -154,6 +154,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
     await Future.delayed(const Duration(seconds: 2));
     
     setState(() => _unSyncedCount = 0);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('✅ Đồng bộ hoàn tất!'),

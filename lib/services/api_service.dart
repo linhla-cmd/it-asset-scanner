@@ -326,7 +326,7 @@ class ApiService {
   }
 
   // 3. Lấy toàn bộ danh sách phiếu kiểm kê
-  static Future<List<dynamic>> getAllAuditTickets() async {
+  static Future<Map<String, dynamic>> getAllAuditTickets() async {
     try {
       final baseUrl = await getBaseUrl();
       final token = await getToken();
@@ -340,16 +340,16 @@ class ApiService {
         },
       ));
 
-      if (response == null) return [];
+      if (response == null) return {'success': false, 'tickets': []};
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['tickets'] ?? [];
+        return {'success': true, 'tickets': data['tickets'] ?? []};
       }
-      return [];
+      return {'success': false, 'tickets': []};
     } catch (e) {
       // print('[ApiService] Lỗi getAllAuditTickets: $e');
-      return [];
+      return {'success': false, 'tickets': []};
     }
   }
 

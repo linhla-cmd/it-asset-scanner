@@ -177,6 +177,7 @@ class _TicketChecklistScreenState extends State<TicketChecklistScreen> {
     // TODO: Implement Excel export
     await Future.delayed(const Duration(seconds: 1));
     
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('✅ Xuất Excel thành công!'),
