@@ -77,6 +77,40 @@ class ApiService {
     return await getAllAuditTickets();
   }
 
+  // Tra cứu thông tin thiết bị chi tiết theo mã tài sản (Asset Tag / Code)
+  static Future<Map<String, dynamic>> getDeviceDetail(String assetCode) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/devices/$assetCode');
+
+      final response = await _retryRequest(() => http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return {
+            'success': true,
+            'device': data['device'] ?? data['data'] ?? data,
+          };
+        }
+      }
+      return {'success': false, 'message': 'Không tìm thấy thiết bị (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối API: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> approveTicket(String ticketId) async {
     try {
       final baseUrl = await getBaseUrl();

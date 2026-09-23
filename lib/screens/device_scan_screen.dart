@@ -44,7 +44,6 @@ class DeviceScanScreen extends StatefulWidget {
 
 class _DeviceScanScreenState extends State<DeviceScanScreen> {
   late MobileScannerController _scannerController;
-  bool _isCameraReady = false;
   bool _isFlashOn = false;
   bool _isLoading = false;
   bool _hasCameraPermission = false;
@@ -75,7 +74,6 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
     if (mounted) {
       setState(() {
         _hasCameraPermission = status.isGranted;
-        _isCameraReady = status.isGranted;
       });
     }
   }
