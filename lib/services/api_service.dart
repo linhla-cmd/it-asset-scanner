@@ -759,4 +759,190 @@ class ApiService {
       return {'success': false};
     }
   }
+
+  // ── IT Inventory Tickets API ──
+  static Future<Map<String, dynamic>> getItInventoryTickets({String? status, String? department, String? search}) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final queryParams = <String, String>{};
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
+      if (department != null && department.isNotEmpty) queryParams['department'] = department;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+
+      final url = Uri.parse('$baseUrl/api/it-inventory/tickets').replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+
+      final response = await _retryRequest(() => http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'tickets': data['tickets'] ?? []};
+      }
+      return {'success': false, 'message': 'Lỗi từ máy chủ (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createItInventoryTicket({
+    required String title,
+    String? department,
+    String? deviceType,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/it-inventory/tickets');
+
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': title,
+          if (department != null) 'department': department,
+          if (deviceType != null) 'device_type': deviceType,
+        }),
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'ticketId': data['ticketId'],
+          'ticketCode': data['ticketCode'],
+          'totalItems': data['totalItems'],
+          'message': data['message'],
+        };
+      }
+      final errData = jsonDecode(response.body);
+      return {'success': false, 'message': errData['error'] ?? 'Tạo phiếu thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getItInventoryTicketDetail(String ticketId) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/it-inventory/tickets/$ticketId');
+
+      final response = await _retryRequest(() => http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'ticket': data['ticket']};
+      }
+      return {'success': false, 'message': 'Không tìm thấy phiếu kiểm kê'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> scanItInventoryItem({
+    required String ticketId,
+    String? assetCode,
+    String? serialNumber,
+    String? qrPayload,
+    int? itDeviceId,
+    String? notes,
+    String? scannedLocation,
+    String? status,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/it-inventory/tickets/$ticketId/scan');
+
+      final response = await _retryRequest(() => http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          if (assetCode != null) 'asset_code': assetCode,
+          if (serialNumber != null) 'serial_number': serialNumber,
+          if (qrPayload != null) 'qr_payload': qrPayload,
+          if (itDeviceId != null) 'it_device_id': itDeviceId,
+          if (notes != null) 'notes': notes,
+          if (scannedLocation != null) 'scanned_location': scannedLocation,
+          if (status != null) 'status': status,
+        }),
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data;
+      }
+      final errData = jsonDecode(response.body);
+      return {'success': false, 'message': errData['message'] ?? 'Quét thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateItInventoryTicketStatus({
+    required String ticketId,
+    required String status,
+  }) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/api/it-inventory/tickets/$ticketId/status');
+
+      final response = await _retryRequest(() => http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'status': status}),
+      ));
+
+      if (response == null) {
+        return {'success': false, 'message': 'Không thể kết nối máy chủ'};
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'message': data['message'], 'ticket': data['ticket']};
+      }
+      final errData = jsonDecode(response.body);
+      return {'success': false, 'message': errData['error'] ?? 'Cập nhật thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: $e'};
+    }
+  }
 }

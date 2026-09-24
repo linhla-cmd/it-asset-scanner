@@ -12,6 +12,19 @@ class AssetInfo {
   final String ipAddress;
   final String processor;
   final String ram;
+  // Extended IT device fields
+  final String? deviceType;
+  final String? serialNumber;
+  final String? manufacturer;
+  final String? model;
+  final String? department;
+  final String? location;
+  final String? status;
+  final String? warrantyExpire;
+  final String? purchaseDate;
+  final String? notes;
+  final String? source;
+  final int? itDeviceId;
 
   AssetInfo({
     required this.assetCode,
@@ -20,6 +33,18 @@ class AssetInfo {
     required this.ipAddress,
     required this.processor,
     required this.ram,
+    this.deviceType,
+    this.serialNumber,
+    this.manufacturer,
+    this.model,
+    this.department,
+    this.location,
+    this.status,
+    this.warrantyExpire,
+    this.purchaseDate,
+    this.notes,
+    this.source,
+    this.itDeviceId,
   });
 
   factory AssetInfo.fromJson(Map<String, dynamic> json) {
@@ -27,11 +52,35 @@ class AssetInfo {
       assetCode: json['asset_code'] ?? json['asset_tag'] ?? json['tag'] ?? 'N/A',
       machineName: json['machine_name'] ?? json['hostname'] ?? json['name'] ?? 'N/A',
       currentUser: json['current_user'] ?? json['user'] ?? json['username'] ?? 'Chưa gán',
-      ipAddress: json['ip_address'] ?? json['ip'] ?? '0.0.0.0',
-      processor: json['processor'] ?? json['cpu'] ?? 'N/A',
-      ram: json['ram'] ?? json['memory'] ?? 'N/A',
+      ipAddress: json['ip_address'] ?? json['ip'] ?? '',
+      processor: json['processor'] ?? json['cpu'] ?? '',
+      ram: json['ram'] ?? json['memory'] ?? '',
+      deviceType: json['device_type'],
+      serialNumber: json['serial_number'],
+      manufacturer: json['manufacturer'],
+      model: json['model'],
+      department: json['department'],
+      location: json['location'],
+      status: json['status'],
+      warrantyExpire: json['warranty_expire'] != null ? _formatTimestamp(json['warranty_expire']) : null,
+      purchaseDate: json['purchase_date'] != null ? _formatTimestamp(json['purchase_date']) : null,
+      notes: json['notes'],
+      source: json['source'],
+      itDeviceId: json['it_device_id'],
     );
   }
+
+  static String _formatTimestamp(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is int) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(value);
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    }
+    return value.toString();
+  }
+
+  bool get isItDevice => source == 'it_devices' || itDeviceId != null;
 }
 
 class DeviceScanScreen extends StatefulWidget {
@@ -111,6 +160,10 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
           return map['tag'] ?? map['asset_tag'] ?? map['asset_code'] ?? map['id'] ?? cleaned;
         }
       } catch (_) {}
+    }
+    // Handle IT format: IT-{id}-{device_name}-{asset_code}
+    if (cleaned.startsWith('IT-')) {
+      return cleaned; // Pass raw to API search as it parses IT-... payload directly
     }
     if (cleaned.contains('-')) {
       final parts = cleaned.split('-');
@@ -691,6 +744,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
   }
 
   Widget _buildAssetCard(AssetInfo asset) {
+    final isIt = asset.isItDevice;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -711,14 +765,14 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'MÃ TÀI SẢN',
-                style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
+              Text(
+                isIt ? 'THIẾT BỊ IT' : 'MÁY TÍNH / AGENT',
+                style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB),
+                  color: isIt ? const Color(0xFF0D9488) : const Color(0xFF2563EB),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -731,15 +785,55 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
           const SizedBox(height: 12),
           Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
           const SizedBox(height: 14),
-          _buildDetailRow('Tên máy (Hostname)', asset.machineName, Icons.computer, Colors.cyanAccent),
+          _buildDetailRow(isIt ? 'Tên thiết bị' : 'Tên máy (Hostname)', asset.machineName, Icons.devices, Colors.cyanAccent),
+          if (asset.deviceType != null && asset.deviceType!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Loại thiết bị', asset.deviceType!, Icons.category, Colors.indigoAccent),
+          ],
+          if (asset.manufacturer != null && asset.manufacturer!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Hãng / Model', '${asset.manufacturer!} ${asset.model ?? ""}'.trim(), Icons.precision_manufacturing, Colors.tealAccent),
+          ],
+          if (asset.serialNumber != null && asset.serialNumber!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Serial Number', asset.serialNumber!, Icons.qr_code, Colors.amberAccent),
+          ],
           const SizedBox(height: 12),
           _buildDetailRow('Người sử dụng', asset.currentUser, Icons.person, Colors.amberAccent),
-          const SizedBox(height: 12),
-          _buildDetailRow('Địa chỉ IP', asset.ipAddress, Icons.wifi, Colors.greenAccent),
-          const SizedBox(height: 12),
-          _buildDetailRow('Bộ vi xử lý (CPU)', asset.processor, Icons.memory, Colors.orangeAccent),
-          const SizedBox(height: 12),
-          _buildDetailRow('Dung lượng RAM', asset.ram, Icons.storage, Colors.purpleAccent),
+          if (asset.department != null && asset.department!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Phòng ban', asset.department!, Icons.business, Colors.lightBlueAccent),
+          ],
+          if (asset.location != null && asset.location!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Vị trí', asset.location!, Icons.place, Colors.pinkAccent),
+          ],
+          if (asset.status != null && asset.status!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Trạng thái', asset.status!, Icons.info_outline, Colors.greenAccent),
+          ],
+          if (asset.warrantyExpire != null && asset.warrantyExpire!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Hạn bảo hành', asset.warrantyExpire!, Icons.event, Colors.deepOrangeAccent),
+          ],
+          if (!isIt) ...[
+            if (asset.ipAddress.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildDetailRow('Địa chỉ IP', asset.ipAddress, Icons.wifi, Colors.greenAccent),
+            ],
+            if (asset.processor.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildDetailRow('Bộ vi xử lý (CPU)', asset.processor, Icons.memory, Colors.orangeAccent),
+            ],
+            if (asset.ram.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildDetailRow('Dung lượng RAM', asset.ram, Icons.storage, Colors.purpleAccent),
+            ],
+          ],
+          if (asset.notes != null && asset.notes!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDetailRow('Ghi chú', asset.notes!, Icons.note, Colors.grey),
+          ],
         ],
       ),
     );

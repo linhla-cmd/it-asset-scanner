@@ -27,7 +27,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
   Future<void> _loadTickets() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.getAllAuditTickets();
+      final response = await ApiService.getItInventoryTickets();
       if (response['success'] == true && mounted) {
         final ticketList = List<Map<String, dynamic>>.from(response['tickets'] ?? []);
         
@@ -36,9 +36,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
         for (var ticket in ticketList) {
           final db = await DatabaseService.instance.database;
           final unsynced = await db.query(
-            'audit_items_offline',
+            'it_inventory_items_offline',
             where: 'ticket_id = ? AND synced = 0',
-            whereArgs: [ticket['ticket_id']],
+            whereArgs: [ticket['id']],
           );
           unsyncedCount += unsynced.length;
         }
@@ -55,7 +55,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Lỗi tải phiếu: $e'),
+            content: Text('❌ Lỗi tải phiếu kiểm kê IT: $e'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );

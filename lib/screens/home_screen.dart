@@ -147,9 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 5. SECTION 3: KIỂM KÊ TÀI SẢN
+              // 5. SECTION 3: KIỂM KÊ THIẾT BỊ IT
               _buildSectionCard(
-                title: 'Kiểm kê tài sản',
+                title: 'Kiểm kê thiết bị IT',
                 badgeText: '1 Đợt',
                 badgeColor: const Color(0xFF0C4A6E),
                 children: [
@@ -157,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     items: [
                       _GridItem(
                         icon: Icons.assignment,
-                        label: 'Phiếu\nkiểm kê',
+                        label: 'Phiếu kiểm\nkê IT',
                         badgeCount: 1,
                         onTap: () => Navigator.push(
                           context,
@@ -165,13 +165,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       _GridItem(
-                        icon: Icons.add,
-                        label: 'Tạo đợt\nkiểm kê',
-                        onTap: () => _showNotice('Tạo đợt kiểm kê'),
+                        icon: Icons.add_box_outlined,
+                        label: 'Tạo phiếu\nkiểm kê IT',
+                        onTap: () => _showNotice('Tạo phiếu kiểm kê IT'),
                       ),
                       _GridItem(
-                        icon: Icons.check_circle,
-                        label: 'Quét kiểm\nkê nhanh',
+                        icon: Icons.qr_code_scanner,
+                        label: 'Quét thiết\nbị IT',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
